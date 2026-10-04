@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAT Delivery Excellence Tracker</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        tremor: {
+                            brand: {
+                                faint: '#eff6ff', // blue-50
+                                muted: '#bfdbfe', // blue-200
+                                subtle: '#60a5fa', // blue-400
+                                DEFAULT: '#3b82f6', // blue-500
+                                emphasis: '#1d4ed8', // blue-700
+                                inverted: '#ffffff', // white
+                            },
+                            background: {
+                                muted: '#f9fafb', // gray-50
+                                subtle: '#f3f4f6', // gray-100
+                                DEFAULT: '#ffffff', // white
+                                emphasis: '#374151', // gray-700
+                            },
+                            border: {
+                                DEFAULT: '#e5e7eb', // gray-200
+                            },
+                            ring: {
+                                DEFAULT: '#e5e7eb', // gray-200
+                            },
+                            content: {
+                                subtle: '#9ca3af', // gray-400
+                                DEFAULT: '#6b7280', // gray-500
+                                emphasis: '#374151', // gray-700
+                                strong: '#111827', // gray-900
+                                inverted: '#ffffff', // white
+                            },
+                        }
+                    },
+                    boxShadow: {
+                        'tremor-input': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+                        'tremor-card': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+                        'tremor-dropdown': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                    },
+                    borderRadius: {
+                        'tremor-small': '0.375rem',
+                        'tremor-default': '0.5rem',
+                        'tremor-full': '9999px',
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <!-- html2canvas -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        body { background-color: #f9fafb; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <style>
+        @keyframes float1 { 0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; } 50% { transform: translate(-20px, -40px) scale(1.1); opacity: 0.6; } }
+        @keyframes float2 { 0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.2; } 50% { transform: translate(30px, -30px) scale(0.9); opacity: 0.5; } }
+        @keyframes float3 { 0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.2; } 50% { transform: translate(-30px, 30px) scale(1.2); opacity: 0.4; } }
+        @keyframes float4 { 0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.15; } 50% { transform: translate(40px, 40px) scale(1.3); opacity: 0.4; } }
+        @keyframes ripple { 0% { transform: scale(0.8) translate(-50%, -50%); opacity: 1; } 100% { transform: scale(2.5) translate(-20%, -20%); opacity: 0; } }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes panGrid { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
+        @keyframes growBar { 0%, 100% { height: 20%; } 50% { height: 85%; } }
+        @keyframes dashLine { 0% { stroke-dashoffset: 200; } 50% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -200; } }
+        .bg-animated-gradient { background: linear-gradient(-45deg, #f8fafc, #eff6ff, #e0e7ff, #f8fafc); background-size: 400% 400%; animation: gradientMove 15s ease infinite; }
+        .bg-animated-grid { background-size: 40px 40px; background-image: linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px); animation: panGrid 20s linear infinite; }
+    </style>
+</head>
+<body class="text-tremor-content-strong min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-tremor-border sticky top-0 z-50 shadow-sm opacity-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-5">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="barGrad1" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="barGrad2" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <linearGradient id="barGrad3" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#ec4899" />
+    </linearGradient>
+  </defs>
+  
+  <rect x="4" y="14" width="4" height="6" rx="1" fill="url(#barGrad1)">
+    <animate attributeName="height" values="6; 14; 6" dur="1.5s" repeatCount="indefinite" />
+    <animate attributeName="y" values="14; 6; 14" dur="1.5s" repeatCount="indefinite" />
+  </rect>
+  
+  <rect x="10" y="8" width="4" height="12" rx="1" fill="url(#barGrad2)">
+    <animate attributeName="height" values="12; 4; 16; 12" dur="2s" repeatCount="indefinite" />
+    <animate attributeName="y" values="8; 16; 4; 8" dur="2s" repeatCount="indefinite" />
+  </rect>
+  
+  <rect x="16" y="12" width="4" height="8" rx="1" fill="url(#barGrad3)">
+    <animate attributeName="height" values="8; 14; 5; 8" dur="1.7s" repeatCount="indefinite" />
+    <animate attributeName="y" values="12; 6; 15; 12" dur="1.7s" repeatCount="indefinite" />
+  </rect>
+</svg>
+                        <h1 class="text-xl font-semibold text-tremor-content-strong tracking-tight hidden sm:block">CAT Delivery Excellence Tracker</h1>
+                        <h1 class="text-xl font-semibold text-tremor-content-strong tracking-tight sm:hidden">CAT</h1>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div id="userInfoDisplay" class="hidden flex-col text-right mr-3 pr-3 border-r border-tremor-border">
+                        <span id="displayUsername" class="text-sm font-semibold text-tremor-content-strong leading-tight"></span>
+                        <span id="displayRole" class="text-xs text-tremor-content font-medium uppercase tracking-wider"></span>
+                    </div>
+                    <span id="lastUpdated" class="text-xs text-tremor-content-subtle hidden sm:inline-block"></span>
+                    
+                    <button id="navLoginBtn" class="bg-white text-gray-900 border border-gray-300 shadow-sm hover:bg-blue-600 hover:text-white font-medium rounded-md text-sm px-4 py-2 transition-colors flex items-center gap-2 hidden">
+                        Login
+                    </button>
+                    <button id="updateDataBtn" class="bg-white border border-black text-black shadow-sm font-medium rounded-tremor-default text-sm px-4 py-2 transition-all duration-200 flex items-center gap-2 hidden hover:bg-blue-500 hover:border-transparent hover:text-white">
+                        Update Data
+                    </button>
+                    <button id="backToDashBtn" class="bg-white border border-black text-black shadow-sm font-medium rounded-tremor-default text-sm px-4 py-2 transition-all duration-200 flex items-center gap-2 hidden hover:bg-blue-500 hover:border-transparent hover:text-white">
+                        Back to Dashboard
+                    </button>
+                    <button id="logoutBtn" class="bg-white text-red-600 border border-red-200 shadow-sm hover:bg-red-50 hover:text-red-700 font-medium rounded-tremor-default text-sm px-4 py-2 transition-colors flex items-center gap-2 hidden">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
+        
+        <!-- Empty State / Loading State -->
+        
+        <div id="loggedOutState" class="hidden relative flex-col items-center justify-center min-h-[82vh] w-full gap-8 rounded-2xl bg-animated-gradient overflow-hidden border border-gray-200 shadow-sm mt-2">
+            
+            <!-- Panning Grid Background -->
+            <div class="absolute inset-0 bg-animated-grid mix-blend-multiply opacity-60"></div>
+            
+            <!-- Floating Data Orbs (Expanded) -->
+            <div class="absolute top-10 left-10 w-32 h-32 bg-blue-300 rounded-full mix-blend-multiply filter blur-2xl" style="animation: float1 8s ease-in-out infinite;"></div>
+            <div class="absolute top-20 right-20 w-48 h-48 bg-indigo-200 rounded-full mix-blend-multiply filter blur-2xl" style="animation: float2 10s ease-in-out infinite;"></div>
+            <div class="absolute bottom-10 left-32 w-36 h-36 bg-purple-200 rounded-full mix-blend-multiply filter blur-2xl" style="animation: float3 12s ease-in-out infinite;"></div>
+            <div class="absolute bottom-20 right-32 w-40 h-40 bg-blue-200 rounded-full mix-blend-multiply filter blur-2xl" style="animation: float4 14s ease-in-out infinite;"></div>
+            <div class="absolute top-1/2 left-4 w-24 h-24 bg-purple-300 rounded-full mix-blend-multiply filter blur-2xl" style="animation: float2 9s ease-in-out infinite;"></div>
+            <div class="absolute bottom-1/4 right-10 w-28 h-28 bg-indigo-300 rounded-full mix-blend-multiply filter blur-2xl" style="animation: float1 11s ease-in-out infinite;"></div>
+            
+            <!-- Floating Data Strings/Nodes -->
+            <div class="absolute top-1/4 left-1/4 text-xs text-blue-600/30 font-mono tracking-widest font-bold" style="animation: float1 15s infinite;">0100110</div>
+            <div class="absolute bottom-1/3 right-1/4 text-xs text-indigo-600/30 font-mono tracking-widest font-bold" style="animation: float2 18s infinite;">DATA.SYNC()</div>
+            <div class="absolute top-1/2 right-[15%] text-xs text-purple-600/30 font-mono tracking-widest font-bold" style="animation: float3 12s infinite;">{ metrics: live }</div>
+            <div class="absolute bottom-[20%] left-[15%] text-xs text-blue-600/30 font-mono tracking-widest font-bold" style="animation: float4 14s infinite;">SYSTEM.ONLINE</div>
+            <div class="absolute top-[15%] right-[30%] text-xs text-indigo-600/30 font-mono tracking-widest font-bold" style="animation: float1 16s infinite;">await fetchMetrics()</div>
+
+            <!-- Pulse Rings Behind Icon -->
+            <div class="absolute top-1/2 left-1/2 w-80 h-80 border border-blue-400/40 rounded-full" style="animation: ripple 3s linear infinite; transform-origin: top left;"></div>
+            <div class="absolute top-1/2 left-1/2 w-80 h-80 border border-indigo-300/40 rounded-full" style="animation: ripple 3s linear infinite 1.5s; transform-origin: top left;"></div>
+            <div class="absolute top-1/2 left-1/2 w-[28rem] h-[28rem] border border-purple-200/30 rounded-full" style="animation: ripple 4s linear infinite 0.75s; transform-origin: top left;"></div>
+
+            <!-- Foreground Animated Icon -->
+            <div class="relative w-72 h-72 border-b-4 border-l-4 border-gray-300/80 z-10 backdrop-blur-md bg-white/40 p-5 rounded-xl shadow-lg">
+                <!-- Animated Bars -->
+                <div class="absolute bottom-0 left-6 w-12 bg-blue-400 rounded-t-md drop-shadow-md" style="animation: growBar 2s ease-in-out infinite 0s;"></div>
+                <div class="absolute bottom-0 left-24 w-12 bg-indigo-400 rounded-t-md drop-shadow-md" style="animation: growBar 2s ease-in-out infinite 0.4s;"></div>
+                <div class="absolute bottom-0 left-44 w-12 bg-purple-500 rounded-t-md drop-shadow-md" style="animation: growBar 2s ease-in-out infinite 0.8s;"></div>
+                <div class="absolute bottom-0 left-64 w-12 bg-blue-600 rounded-t-md drop-shadow-md" style="animation: growBar 2s ease-in-out infinite 1.2s;"></div>
+                
+                <!-- Animated Trend Line -->
+                <svg class="absolute inset-0 w-full h-full text-green-500 z-20 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <path stroke-width="4" stroke-linecap="round" stroke-linejoin="round" d="M8,80 L32,45 L58,55 L95,15" stroke-dasharray="200" style="animation: dashLine 4s ease-in-out infinite;"></path>
+                    <circle cx="95" cy="15" r="5" fill="currentColor" class="animate-pulse shadow-green-500"></circle>
+                </svg>
+            </div>
+            
+            <!-- Text Content -->
+            <div class="text-center z-10 bg-white/60 px-10 py-5 rounded-2xl backdrop-blur-md shadow-lg border border-white/80 mt-4">
+                <h2 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight drop-shadow-sm">CAT Delivery Excellence</h2>
+                <p class="text-gray-700 mt-3 text-base max-w-md mx-auto font-medium">Please login to access real-time team metrics, performance analytics, and advanced tracker configurations.</p>
+            </div>
+        </div>
+        
+        <div id="emptyState" class="flex flex-col items-center justify-center py-20 text-center bg-white rounded-tremor-default border border-tremor-border shadow-tremor-card">
+            <svg class="w-16 h-16 text-tremor-content-subtle mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <h3 class="text-lg font-medium text-tremor-content-strong" id="loadingText">Loading Data from Database...</h3>
+            <p class="text-sm text-tremor-content mt-1 mb-6 max-w-md">Please wait while we establish a connection.</p>
+            
+        </div>
+
+        <!-- Update Data View -->
+        <div id="updateWrapper" class="hidden flex-col gap-6">
+            <div class="bg-white rounded-tremor-default border border-tremor-border shadow-tremor-card p-4">
+                <h2 class="text-tremor-title font-medium text-tremor-content-strong mb-4">Update Team Data</h2>
+                
+                <div class="mb-4">
+                    <label class="text-sm text-tremor-content">Select Team</label>
+                    <select id="updateTeamSelect" class="mt-1 block w-full border border-tremor-border rounded-tremor-default px-3 py-2 text-tremor-content-strong text-sm focus:ring-tremor-brand-DEFAULT focus:border-tremor-brand-DEFAULT shadow-sm">
+                    </select>
+                </div>
+
+                <div class="flex gap-4 border-b border-tremor-border mb-4">
+                    <button id="tabMetrics" class="px-4 py-2 text-sm font-medium text-tremor-brand-DEFAULT border-b-2 border-tremor-brand-DEFAULT">Metrics</button>
+                    <button id="tabDetails" class="px-4 py-2 text-sm font-medium text-tremor-content hover:text-tremor-content-strong">Details</button>
+                    <button id="tabConfigs" class="px-4 py-2 text-sm font-medium text-tremor-content hover:text-tremor-content-strong hidden">Configurations</button>
+                </div>
+
+                <!-- Forms Container -->
+                <div id="updateFormContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Fields will be dynamically injected here -->
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <p id="updateMsg" class="text-sm mt-2 hidden"></p>
+                    <button id="saveUpdateBtn" class="px-4 py-2 rounded-tremor-default text-sm font-medium shadow-sm transition-all duration-200 border border-black text-black bg-white hover:bg-blue-500 hover:border-transparent hover:text-white">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboardWrapper" class="hidden flex-col gap-6">
+            
+            <!-- Sprint & Context Banner -->
+            <div class="bg-white rounded-tremor-default border border-tremor-border shadow-tremor-card p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-6">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span id="bannerSprint" class="inline-flex items-center px-2.5 py-0.5 rounded-tremor-full text-xs font-medium bg-blue-100 text-blue-800">Sprint 5</span>
+                            <span id="bannerWeek" class="text-sm text-tremor-content font-medium">Wk 27 / 2026</span>
+                        </div>
+                        <div class="text-xs text-tremor-content-subtle">
+                            Dates: <span id="bannerDates" class="font-medium text-tremor-content">01-Jul-2026 to 15-Jul-2026</span>
+                        </div>
+                    </div>
+                    
+                    <div id="teamBannerDetails" class="hidden flex-col gap-1 border-t sm:border-t-0 sm:border-l border-tremor-border pt-3 sm:pt-0 sm:pl-6">
+                        <div class="text-xs text-tremor-content">
+                            CAT Manager: <span id="bannerCatManager" class="font-semibold text-tremor-content-strong">--</span>
+                        </div>
+                        <div class="text-xs text-tremor-content">
+                            Engagement Code: <span id="bannerEngagementCode" class="font-semibold text-tremor-content-strong">--</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="engagementSelectContainer" class="w-full sm:w-72">
+                    <label for="engagementSelect" class="block text-xs font-medium text-tremor-content mb-1">Select Engagement / Team</label>
+                    <select id="engagementSelect" class="block w-full rounded-tremor-default border-tremor-border shadow-tremor-input focus:border-tremor-brand-DEFAULT focus:ring-tremor-brand-DEFAULT sm:text-sm py-2 px-3 border bg-white text-tremor-content-strong">
+                        <!-- Options populated via JS -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- SPOC Info -->
+            <div id="spocInfoWrapper" class="flex items-center justify-between text-sm">
+                <div id="spocContainer" class="text-tremor-content">
+                    SPOC / Lead: <span id="currentSpoc" class="font-semibold text-tremor-content-strong">--</span>
+                </div>
+                
+                <!-- Hourly Rate Input (only visible on Value tab visually, but kept in DOM) -->
+                <div id="hourlyRateContainer" class="flex items-center gap-2">
+                    <label for="hourlyRate" class="text-xs font-medium text-tremor-content">Hourly Rate (₹/hr):</label>
+                    <div class="relative rounded-tremor-default shadow-tremor-input">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                            <span class="text-tremor-content-subtle sm:text-sm">₹</span>
+                        </div>
+                        <input type="number" id="hourlyRate" value="10" min="0" step="1" class="block w-20 rounded-tremor-default border-tremor-border py-1 pl-6 pr-2 text-sm focus:border-tremor-brand-DEFAULT focus:ring-tremor-brand-DEFAULT border bg-white text-tremor-content-strong">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs Nav -->
+            <div class="border-b border-tremor-border">
+                <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs" id="tabsNav">
+                    <button onclick="switchTab('main')" data-tab="main" class="tab-btn whitespace-nowrap border-b-2 py-3 px-1 text-sm font-medium border-tremor-brand-DEFAULT text-tremor-brand-DEFAULT">Main Dashboard</button>
+                    <button onclick="switchTab('delivery')" data-tab="delivery" class="tab-btn whitespace-nowrap border-b-2 border-transparent py-3 px-1 text-sm font-medium text-tremor-content hover:border-tremor-border hover:text-tremor-content-strong transition-colors">Delivery</button>
+                    <button onclick="switchTab('health')" data-tab="health" class="tab-btn whitespace-nowrap border-b-2 border-transparent py-3 px-1 text-sm font-medium text-tremor-content hover:border-tremor-border hover:text-tremor-content-strong transition-colors">Program Health</button>
+                    <button onclick="switchTab('capability')" data-tab="capability" class="tab-btn whitespace-nowrap border-b-2 border-transparent py-3 px-1 text-sm font-medium text-tremor-content hover:border-tremor-border hover:text-tremor-content-strong transition-colors">Capability & Gaps</button>
+                    <button onclick="switchTab('automation')" data-tab="automation" class="tab-btn whitespace-nowrap border-b-2 border-transparent py-3 px-1 text-sm font-medium text-tremor-content hover:border-tremor-border hover:text-tremor-content-strong transition-colors">Automation</button>
+                    <button onclick="switchTab('compliance')" data-tab="compliance" class="tab-btn whitespace-nowrap border-b-2 border-transparent py-3 px-1 text-sm font-medium text-tremor-content hover:border-tremor-border hover:text-tremor-content-strong transition-colors">Compliance</button>
+                    <button onclick="switchTab('value')" data-tab="value" class="tab-btn whitespace-nowrap border-b-2 border-transparent py-3 px-1 text-sm font-medium text-tremor-content hover:border-tremor-border hover:text-tremor-content-strong transition-colors">Problem Statement and Effort Saved</button>
+                </nav>
+            </div>
+
+            <!-- Tab Content: Main Dashboard -->
+            <div id="tab-main" class="tab-content active space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="summaryCardsContainer">
+                    <!-- Summary cards injected here -->
+                </div>
+            </div>
+
+            <!-- Tab Content: Delivery -->
+            <div id="tab-delivery" class="tab-content space-y-6">
+                <h3 class="text-lg font-medium text-tremor-content-strong">Delivery Metrics</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="deliveryMetricsGrid"></div>
+                
+                <h3 class="text-lg font-medium text-tremor-content-strong pt-4 border-t border-tremor-border">Details</h3>
+                <div class="grid grid-cols-1 gap-6" id="deliveryDetailsGrid"></div>
+            </div>
+
+            <!-- Tab Content: Client Health -->
+            <div id="tab-health" class="tab-content space-y-6">
+                <h3 class="text-lg font-medium text-tremor-content-strong">Program Health</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="healthMetricsGrid"></div>
+                
+                <h3 class="text-lg font-medium text-tremor-content-strong pt-4 border-t border-tremor-border">Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start" id="healthDetailsGrid"></div>
+            </div>
+
+            <!-- Tab Content: Capability & Gaps -->
+            <div id="tab-capability" class="tab-content space-y-6">
+                <h3 class="text-lg font-medium text-tremor-content-strong">Capability Metrics</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6" id="capabilityMetricsGrid"></div>
+                
+                <h3 class="text-lg font-medium text-tremor-content-strong pt-4 border-t border-tremor-border">Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start" id="capabilityDetailsGrid"></div>
+            </div>
+
+            <!-- Tab Content: Automation -->
+            <div id="tab-automation" class="tab-content space-y-6">
+                <h3 class="text-lg font-medium text-tremor-content-strong">Automation Metrics</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="automationMetricsGrid"></div>
+                
+                <h3 class="text-lg font-medium text-tremor-content-strong pt-4 border-t border-tremor-border">Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start" id="automationDetailsGrid"></div>
+            </div>
+
+            <!-- Tab Content: Compliance -->
+            <div id="tab-compliance" class="tab-content space-y-6">
+                <h3 class="text-lg font-medium text-tremor-content-strong">Compliance Details & Metrics</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start" id="complianceDetailsGrid"></div>
+            </div>
+
+            <!-- Tab Content: Value Metrics -->
+            <div id="tab-value" class="tab-content space-y-6">
+                <h3 class="text-lg font-medium text-tremor-content-strong">Problem Statement, Solution and Effort Saved</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="valueMetricsGrid"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --- State ---
+        let workbookFile = null;
+        let globalData = {
+            sprintInfo: {
+                week: "", dates: "", name: "", sprintNum: ""
+            },
+            metrics: [], // array of objects { engagement, spoc, ...cols }
+            details: [],
+            ragConfig: {}
+        };
+        let currentEngagement = "";
+        let currentTab = "main";
+
+        // --- DOM Elements ---
+        const fileInput = document.getElementById('excelFile');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const engagementSelect = document.getElementById('engagementSelect');
+        const hourlyRateInput = document.getElementById('hourlyRate');
+        
+        // --- UI Logic ---
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('border-tremor-brand-DEFAULT', 'text-tremor-brand-DEFAULT');
+                el.classList.add('border-transparent', 'text-tremor-content');
+            });
+            
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            const btn = document.querySelector(`button[data-tab="${tabId}"]`);
+            if(btn) {
+                btn.classList.remove('border-transparent', 'text-tremor-content');
+                btn.classList.add('border-tremor-brand-DEFAULT', 'text-tremor-brand-DEFAULT');
+            }
+
+            // Sync visibility of controls
+            const dropdownContainer = document.getElementById('engagementSelectContainer');
+            if (dropdownContainer) {
+                if (tabId === 'main') {
+                    dropdownContainer.classList.add('hidden');
+                } else {
+                    dropdownContainer.classList.remove('hidden');
+                }
+            }
+
+            const teamBannerDetails = document.getElementById('teamBannerDetails');
+            if (teamBannerDetails) {
+                if (tabId === 'main') {
+                    teamBannerDetails.classList.add('hidden');
+                    teamBannerDetails.classList.remove('flex');
+                } else {
+                    teamBannerDetails.classList.remove('hidden');
+                    teamBannerDetails.classList.add('flex');
+                }
+            }
+
+            const spocInfoWrapper = document.getElementById('spocInfoWrapper');
+            const spocContainer = document.getElementById('spocContainer');
+            const hourlyRateContainer = document.getElementById('hourlyRateContainer');
+            
+            if (spocInfoWrapper) {
+                if (tabId === 'main') {
+                    spocInfoWrapper.classList.add('hidden');
+                } else {
+                    spocInfoWrapper.classList.remove('hidden');
+                    if (spocContainer) {
+                        spocContainer.classList.remove('hidden');
+                    }
+                    if (hourlyRateContainer) {
+                        if (tabId === 'value') {
+                            hourlyRateContainer.classList.remove('hidden');
+                        } else {
+                            hourlyRateContainer.classList.add('hidden');
+                        }
+                    }
+                }
+            }
+        }
+
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('dashboardData');
+            sessionStorage.removeItem('dashboardTimestamp');
+            window.location.reload();
+        });
+
+        function updateDropdown() {
+            engagementSelect.innerHTML = "";
+            if(globalData.metrics.length === 0) return;
+            
+            globalData.metrics.forEach(m => {
+                let opt = document.createElement('option');
+                opt.value = m.engagement;
+                opt.textContent = m.engagement;
+                engagementSelect.appendChild(opt);
+            });
+            
+            if(!currentEngagement || !globalData.metrics.find(m => m.engagement === currentEngagement)) {
+                currentEngagement = globalData.metrics[0].engagement;
+            }
+            engagementSelect.value = currentEngagement;
+        }
+
+        // --- RAG Logic ---
+        const RAG = { GREEN: 'green', YELLOW: 'yellow', RED: 'red', NONE: 'none' };
+
+        function getRagDef(metric, val, engagement = currentEngagement) {
+            const teamConfig = globalData.ragConfig[engagement];
+            const defaultConfig = globalData.ragConfig['Default'];
+            
+            const config = (teamConfig && teamConfig[metric]) || (defaultConfig && defaultConfig[metric]);
+            
+            if(!config) return RAG.NONE;
+            
+            if(val === null || val === undefined) return RAG.NONE;
+            const cleanVal = String(val).trim().toUpperCase();
+            if(cleanVal === 'NA' || cleanVal === 'N/A' || cleanVal === '') return RAG.NONE;
+            
+            if(isNaN(val)) return RAG.NONE;
+            const v = Number(val);
+            
+            const zeroGreenMetrics = [
+                'usPushed',
+                'defectLeakage',
+                'prodIncidents',
+                'openRisks',
+                'escalations',
+                'autoToolsReq',
+                'buildToolsReq'
+            ];
+            if (zeroGreenMetrics.includes(metric) && v === 0) {
+                return RAG.GREEN;
+            }
+            
+            if(config.type.includes('higher')) {
+                if(config.expected !== null && v >= config.expected) return RAG.GREEN;
+                if(config.expected !== null && config.variance !== null && v >= (config.expected - config.variance)) return RAG.YELLOW;
+                return RAG.RED;
+            } else if (config.type.includes('lower')) {
+                if(config.expected !== null && v <= config.expected) return RAG.GREEN;
+                if(config.expected !== null && config.variance !== null && v <= (config.expected + config.variance)) return RAG.YELLOW;
+                return RAG.RED;
+            }
+            
+            return RAG.NONE;
+        }
+
+        // --- Render Helpers ---
+        function createCard(title, value, metricKey, suffix="", subLabel="") {
+            // Tremor styling for cards
+            let bgClass = "bg-white";
+            let textClass = "text-tremor-content-strong";
+            let badgeHtml = "";
+            let ringClass = "ring-1 ring-tremor-border";
+
+            let ragStatus = metricKey;
+            let config = null;
+
+            if(metricKey !== RAG.GREEN && metricKey !== RAG.YELLOW && metricKey !== RAG.RED && metricKey !== RAG.NONE) {
+                ragStatus = getRagDef(metricKey, value);
+                const teamConfig = globalData.ragConfig[currentEngagement];
+                const defaultConfig = globalData.ragConfig['Default'];
+                config = (teamConfig && teamConfig[metricKey]) || (defaultConfig && defaultConfig[metricKey]);
+            }
+
+            let thresholdInfo = "";
+            if(config && config.expected !== null && config.variance !== null) {
+                let direction = config.type.includes('higher') ? 'below' : 'above';
+                let critVal = config.type.includes('higher') ? (config.expected - config.variance) : (config.expected + config.variance);
+                let displaySuffix = suffix || "";
+                thresholdInfo = `<div class="text-xs text-tremor-content mt-1">Critical when ${direction} ${critVal}${displaySuffix}</div>`;
+            }
+
+            if(ragStatus === RAG.GREEN) {
+                badgeHtml = `<span class="inline-flex items-center rounded-tremor-small bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20">✅ On Track</span>`;
+                ringClass = "ring-2 ring-emerald-500 shadow-sm";
+            } else if(ragStatus === RAG.YELLOW) {
+                badgeHtml = `<span class="inline-flex items-center rounded-tremor-small bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">⚠️ At Risk</span>`;
+                ringClass = "ring-2 ring-amber-500 shadow-sm";
+            } else if(ragStatus === RAG.RED) {
+                badgeHtml = `<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20">🔴 Critical</span>`;
+                ringClass = "ring-2 ring-rose-500 shadow-sm";
+                bgClass = "bg-rose-50/30"; // subtle tint for red cards
+            }
+
+            const valStr = (value === null || value === undefined || value === "") ? "—" : value;
+
+            return `
+                <div class="relative w-full rounded-tremor-default ${bgClass} p-6 ${ringClass} shadow-tremor-card flex flex-col justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-tremor-content truncate">${title}</p>
+                        <div class="mt-2 flex items-baseline gap-2">
+                            <p class="text-3xl font-semibold ${textClass}">${valStr}${valStr !== "—" ? suffix : ""}</p>
+                            ${subLabel ? `<span class="text-sm font-medium text-tremor-content-subtle">${subLabel}</span>` : ''}
+                        </div>
+                        ${thresholdInfo}
+                    </div>
+                    ${badgeHtml ? `<div class="mt-4 flex">${badgeHtml}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function createListPanel(title, rawPoints) {
+            let pts = [];
+            if(rawPoints && typeof rawPoints === 'string') {
+                pts = rawPoints.split('|').map(s => s.trim()).filter(s => s.length > 0);
+            }
+            
+            let listHtml = `<p class="text-sm text-tremor-content-subtle italic mt-2">— No data available</p>`;
+            if(pts.length > 0) {
+                listHtml = `<ul class="mt-3 space-y-2 text-sm text-tremor-content-strong list-disc pl-4 marker:text-tremor-brand-DEFAULT">` + 
+                           pts.map(p => `<li>${p}</li>`).join('') + 
+                           `</ul>`;
+            }
+
+            return `
+                <div class="w-full rounded-tremor-default bg-white p-5 ring-1 ring-tremor-border shadow-tremor-card h-full">
+                    <div class="flex items-center gap-2 border-b border-tremor-border pb-2">
+                        <svg class="w-4 h-4 text-tremor-content-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                        <h4 class="font-medium text-tremor-content-strong">${title}</h4>
+                    </div>
+                    ${listHtml}
+                </div>
+            `;
+        }
+
+        function createYesNoBadge(title, value, rag = RAG.NONE) {
+            let isYes = String(value).toLowerCase().trim() === 'yes';
+            let isNo = String(value).toLowerCase().trim() === 'no';
+            let isNA = ['na', 'n/a', ''].includes(String(value).toLowerCase().trim());
+            
+            let badgeValStr = isNA ? "NA" : "—";
+            let badgeHtml = `<span class="inline-flex items-center rounded-tremor-small bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">${badgeValStr}</span>`;
+            if(isYes) {
+                let ring = rag === RAG.GREEN ? "ring-2 ring-emerald-500 shadow-sm" : "ring-1 ring-inset ring-emerald-600/20";
+                badgeHtml = `<span class="inline-flex items-center rounded-tremor-small bg-emerald-100 px-2.5 py-0.5 text-sm font-medium text-emerald-800 ${ring} gap-1.5"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>Yes</span>`;
+            }
+            if(isNo) {
+                let ring = rag === RAG.RED ? "ring-2 ring-rose-500 shadow-sm" : "ring-1 ring-inset ring-rose-600/20";
+                badgeHtml = `<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2.5 py-0.5 text-sm font-medium text-rose-800 ${ring} gap-1.5"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>No</span>`;
+            }
+
+            let bgClass = rag === RAG.RED ? "bg-rose-50/30" : "bg-white";
+            let outerRing = rag === RAG.RED ? "ring-2 ring-rose-500 shadow-sm" : "ring-1 ring-tremor-border shadow-sm";
+
+            return `
+                <div class="flex items-center justify-between p-4 ${bgClass} rounded-tremor-default ${outerRing}">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-medium text-tremor-content-strong">${title}</span>
+                        ${rag === RAG.RED ? '<span class="text-xs text-rose-600 mt-1">Critical if No</span>' : ''}
+                    </div>
+                    ${badgeHtml}
+                </div>
+            `;
+        }
+
+        // --- Render Functions ---
+        function renderAll() {
+            const curM = globalData.metrics.find(m => m.engagement === currentEngagement);
+            if(!curM) return;
+
+            const curD = globalData.details.find(d => d.engagement === currentEngagement) || {};
+
+            // Banner & Header
+            const sprintText = globalData.sprintInfo.sprintNum ? `Sprint ${globalData.sprintInfo.sprintNum}` : "Sprint 5";
+            const weekText = globalData.sprintInfo.week || "Wk 27 / 2026";
+            const datesText = globalData.sprintInfo.dates || "01-Jul-2026 to 15-Jul-2026";
+
+            document.getElementById('bannerSprint').textContent = sprintText;
+            document.getElementById('bannerWeek').textContent = weekText;
+            document.getElementById('bannerDates').textContent = datesText;
+            
+            const bannerCatManager = document.getElementById('bannerCatManager');
+            const bannerEngagementCode = document.getElementById('bannerEngagementCode');
+            if (bannerCatManager) {
+                bannerCatManager.textContent = curD.catManager || "--";
+            }
+            if (bannerEngagementCode) {
+                bannerEngagementCode.textContent = curD.engagementCode || "--";
+            }
+
+            document.getElementById('currentSpoc').textContent = curM.spoc || "--";
+
+            // Render Tabs
+            renderDelivery();
+            renderHealth();
+            renderCapability();
+            renderAutomation();
+            renderCompliance();
+            renderValueMetrics();
+            
+            // Render Summary last so it can compute overall RAGs
+            renderSummaryCards();
+            
+            // Sync controls visibility
+            switchTab(currentTab);
+        }
+
+        function renderDelivery() {
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
+            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+            
+            document.getElementById('deliveryMetricsGrid').innerHTML = `
+                ${createCard("Story Points Assigned", m.spAssigned, 'spAssigned')}
+                ${createCard("Story Points Completed", m.spCompleted, 'spCompleted')}
+                ${createCard("US/Tasks Pushed to Next Sprint", m.usPushed, 'usPushed')}
+                ${createCard("US/Tasks Assigned", m.usAssigned, RAG.NONE)}
+                ${createCard("US/Tasks Completed", m.usCompleted, RAG.NONE)}
+            `;
+
+            document.getElementById('deliveryDetailsGrid').innerHTML = `
+                ${createListPanel("User Stories/Tasks Assigned", d.usAssignedPts)}
+            `;
+        }
+
+        function renderHealth() {
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
+            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+
+            document.getElementById('healthMetricsGrid').innerHTML = `
+                ${createCard("Defect Leakage", m.defectLeakage, 'defectLeakage', "%")}
+                ${createCard("Production Incidents", m.prodIncidents, 'prodIncidents')}
+                ${createCard("Open Risks & Issues", m.openRisks, 'openRisks')}
+                ${createCard("Escalations", m.escalations, 'escalations')}
+                ${createCard("SOW Milestones", m.sowMilestones, RAG.NONE)}
+            `;
+
+            document.getElementById('healthDetailsGrid').innerHTML = `
+                ${createListPanel("Defect Leakages", d.defectPts)}
+                ${createListPanel("Production Incidents", d.incidentPts)}
+                ${createListPanel("Open Risks & Issues", d.riskPts)}
+                ${createListPanel("SOW Milestones", d.sowPts)}
+                ${createListPanel("Escalations RCA", d.escalationPts)}
+            `;
+        }
+
+        function renderCapability() {
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
+            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+
+            document.getElementById('capabilityMetricsGrid').innerHTML = `
+                ${createCard("Automation Tool Proficiencies Required", m.autoToolsReq, 'autoToolsReq')}
+                ${createCard("Build Tool Proficiencies Required", m.buildToolsReq, 'buildToolsReq')}
+            `;
+
+            document.getElementById('capabilityDetailsGrid').innerHTML = `
+                <div class="space-y-4">
+                    ${createListPanel("Automation Tools Required", d.autoToolPts)}
+                    ${createListPanel("Build Tools Required", d.buildToolPts)}
+                </div>
+                <div class="space-y-4">
+                    ${createYesNoBadge("Cloud & DevOps Proficiencies (Azure/AWS)", d.cloudProf, getYesNoRag(d.cloudProf))}
+                    ${createYesNoBadge("CI/CD Pipeline Setup Proficiency", d.cicdSetup, getYesNoRag(d.cicdSetup))}
+                    ${createYesNoBadge("KT Documentation Prepared", d.ktPrep)}
+                </div>
+            `;
+        }
+
+        function renderAutomation() {
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
+            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+
+            document.getElementById('automationMetricsGrid').innerHTML = `
+                ${createCard("Automation Coverage", m.autoCoverage, 'autoCoverage', "%")}
+                ${createCard("Automation Stability", m.autoStability, 'autoStability', "%")}
+                ${createCard("Knowledge Transfer", m.kt, RAG.NONE, "", "📊 Informational")}
+                ${createCard("Reusable Assets", m.assets, RAG.NONE, "", "📊 Informational")}
+                ${createCard("Regression Run Time", m.regRunTime, RAG.NONE, " hrs", "📈 Track Trend")}
+                ${createCard("Reg. Exec Time (No Auto)", m.regExecTimeNoAuto, RAG.NONE, " hrs", "📈 Track Trend")}
+                ${createCard("Automation Bugs Reported", m.autoBugs, RAG.NONE)}
+            `;
+
+            document.getElementById('automationDetailsGrid').innerHTML = `
+                <div class="space-y-4">
+                    ${createListPanel("Automation Bugs Reported", d.autoBugsPts)}
+                    ${createListPanel("Assets Reused", d.assetPts)}
+                </div>
+                <div>
+                    ${createYesNoBadge("CI/CD Maturity", d.cicdMat, getYesNoRag(d.cicdMat))}
+                </div>
+            `;
+        }
+
+        function renderCompliance() {
+            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+            const compRag = d.processComp === 100 ? RAG.GREEN : RAG.RED;
+
+            document.getElementById('complianceDetailsGrid').innerHTML = `
+                <div class="space-y-4 col-span-1 md:col-span-2">
+                    ${createYesNoBadge("Deloitte Timesheet Filled", d.deloitteTime)}
+                    ${createYesNoBadge("Tenrox Timesheet Filled", d.tenroxTime)}
+                </div>
+                <div>
+                    ${createCard("Process Compliance", d.processComp, compRag, "%")}
+                </div>
+            `;
+        }
+
+        function renderValueMetrics() {
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
+            const rate = parseFloat(hourlyRateInput.value) || 0;
+            
+            let effortSavings = null;
+            let savingsMoney = null;
+
+            if(m && m.regExecTimeNoAuto !== null && m.regRunTime !== null && m.regExecTimeNoAuto !== undefined && m.regRunTime !== undefined) {
+                const valNoAuto = String(m.regExecTimeNoAuto).trim().toUpperCase();
+                const valRunTime = String(m.regRunTime).trim().toUpperCase();
+                
+                if(valNoAuto !== 'NA' && valNoAuto !== 'N/A' && valNoAuto !== '' &&
+                   valRunTime !== 'NA' && valRunTime !== 'N/A' && valRunTime !== '') {
+                    
+                    const numNoAuto = Number(m.regExecTimeNoAuto);
+                    const numRunTime = Number(m.regRunTime);
+                    
+                    if(!isNaN(numNoAuto) && !isNaN(numRunTime)) {
+                        effortSavings = (numNoAuto - numRunTime).toFixed(1);
+                        savingsMoney = (effortSavings * rate).toFixed(2);
+                    }
+                }
+            }
+
+            document.getElementById('valueMetricsGrid').innerHTML = `
+                ${createCard("Effort Savings", effortSavings, RAG.NONE, " hrs", "📈 Track Trend")}
+                
+                <div class="relative w-full rounded-tremor-default bg-gradient-to-br from-amber-500 to-orange-600 p-6 shadow-lg flex flex-col justify-between text-white">
+                    <div>
+                        <p class="text-sm font-medium text-amber-100">Financial Savings</p>
+                        <div class="mt-2 flex items-baseline gap-2">
+                            <p class="text-4xl font-bold">₹${savingsMoney !== null ? savingsMoney : "—"}</p>
+                            <span class="text-sm font-medium text-amber-200">INR</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-amber-200 opacity-80">Calculated at ₹${rate}/hr</div>
+                </div>
+            `;
+        }
+
+        // --- Summary RAG Logic ---
+        function getYesNoRag(val) {
+            let str = String(val).toLowerCase().trim();
+            if(str === 'yes') return RAG.GREEN;
+            if(str === 'no') return RAG.RED;
+            return RAG.NONE;
+        }
+
+        function getWorstRag(rags) {
+            if(rags.includes(RAG.RED)) return RAG.RED;
+            if(rags.includes(RAG.YELLOW)) return RAG.YELLOW;
+            if(rags.includes(RAG.GREEN)) return RAG.GREEN;
+            return RAG.NONE;
+        }
+
+        function getIndicatorDot(rag) {
+            if(rag === RAG.RED) return `<span class="h-2.5 w-2.5 rounded-full bg-rose-500 flex-shrink-0"></span>`;
+            if(rag === RAG.YELLOW) return `<span class="h-2.5 w-2.5 rounded-full bg-amber-500 flex-shrink-0"></span>`;
+            if(rag === RAG.GREEN) return `<span class="h-2.5 w-2.5 rounded-full bg-emerald-500 flex-shrink-0"></span>`;
+            return `<span class="h-2.5 w-2.5 rounded-full bg-gray-300 flex-shrink-0"></span>`;
+        }
+
+        function getBadgeHtml(rag) {
+            if(rag === RAG.RED) return `<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20">Critical</span>`;
+            if(rag === RAG.YELLOW) return `<span class="inline-flex items-center rounded-tremor-small bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">⚠️ At Risk</span>`;
+            if(rag === RAG.GREEN) return `<span class="inline-flex items-center rounded-tremor-small bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20">✅ On Track</span>`;
+            return `<span class="inline-flex items-center rounded-tremor-small bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">N/A</span>`;
+        }
+
+        function selectEngagementAndTab(engagement, tabId) {
+            engagementSelect.value = engagement;
+            currentEngagement = engagement;
+            renderAll();
+            switchTab(tabId);
+        }
+
+        function renderSummaryCards() {
+            let tableRows = '';
+            
+            globalData.metrics.forEach(m => {
+                const d = globalData.details.find(x => x.engagement === m.engagement) || {};
+                const eng = m.engagement;
+                
+                const deliveryRags = [
+                    getRagDef('spAssigned', m.spAssigned, eng),
+                    getRagDef('spCompleted', m.spCompleted, eng),
+                    getRagDef('usPushed', m.usPushed, eng)
+                ];
+                
+                const healthRags = [
+                    getRagDef('defectLeakage', m.defectLeakage, eng),
+                    getRagDef('prodIncidents', m.prodIncidents, eng),
+                    getRagDef('openRisks', m.openRisks, eng),
+                    getRagDef('escalations', m.escalations, eng)
+                ];
+
+                const autoRags = [
+                    getRagDef('autoCoverage', m.autoCoverage, eng),
+                    getRagDef('autoStability', m.autoStability, eng),
+                    getYesNoRag(d.cicdMat)
+                ];
+
+                const capabilityRags = [
+                    getRagDef('autoToolsReq', m.autoToolsReq, eng),
+                    getRagDef('buildToolsReq', m.buildToolsReq, eng),
+                    getYesNoRag(d.cloudProf),
+                    getYesNoRag(d.cicdSetup)
+                ];
+
+                const complianceRags = [];
+                if (d.processComp !== null && d.processComp !== undefined) {
+                    complianceRags.push(d.processComp === 100 ? RAG.GREEN : RAG.RED);
+                }
+
+                const deliveryWorst = getWorstRag(deliveryRags);
+                const healthWorst = getWorstRag(healthRags);
+                const capabilityWorst = getWorstRag(capabilityRags);
+                const autoWorst = getWorstRag(autoRags);
+                const compWorst = getWorstRag(complianceRags);
+                
+                const allRags = [deliveryWorst, healthWorst, capabilityWorst, autoWorst, compWorst];
+                const overallWorst = getWorstRag(allRags);
+                
+                let earlyWarnings = [];
+                const checkWarning = (metricKey, label, value) => {
+                    const rag = getRagDef(metricKey, value, eng);
+                    if (rag === RAG.RED) {
+                        earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">${label}</span>`);
+                    } else if (rag === RAG.YELLOW) {
+                        earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20 whitespace-nowrap">${label}</span>`);
+                    }
+                };
+
+                checkWarning('spCompleted', 'Story Points', m.spCompleted);
+                checkWarning('usPushed', 'Pushed Stories', m.usPushed);
+                checkWarning('defectLeakage', 'Defect Leakage', m.defectLeakage);
+                checkWarning('prodIncidents', 'Incidents', m.prodIncidents);
+                checkWarning('openRisks', 'Open Risks', m.openRisks);
+                checkWarning('escalations', 'Escalations', m.escalations);
+                checkWarning('autoCoverage', 'Auto Coverage', m.autoCoverage);
+                checkWarning('autoStability', 'Auto Stability', m.autoStability);
+                checkWarning('autoToolsReq', 'Auto Tools Gap', m.autoToolsReq);
+                checkWarning('buildToolsReq', 'Build Tools Gap', m.buildToolsReq);
+                if (getYesNoRag(d.cloudProf) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">Cloud Prof.</span>`);
+                if (getYesNoRag(d.cicdSetup) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">CI/CD Setup</span>`);
+                if (getYesNoRag(d.cicdMat) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">CI/CD Maturity</span>`);
+                if (d.processComp !== 100) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">Timesheets Missing</span>`);
+
+                let uniqueWarnings = [...new Set(earlyWarnings)];
+                let warningsHtml = uniqueWarnings.length > 0 
+                    ? `<div class="flex flex-wrap gap-1 w-48">${uniqueWarnings.join('')}</div>` 
+                    : `<span class="text-xs text-tremor-content-subtle">None</span>`;
+
+                tableRows += `
+                    <tr class="hover:bg-tremor-background-muted transition-colors cursor-pointer" onclick="selectEngagementAndTab('${eng}', 'delivery')">
+                        <td class="px-3 py-2.5 text-sm font-medium text-tremor-content-strong whitespace-nowrap">
+                            <div class="inline-flex items-center gap-2">
+                                ${getIndicatorDot(overallWorst)}
+                                <span>${eng}</span>
+                            </div>
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${d.lobLead || '--'}</td>
+                        <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${getBadgeHtml(deliveryWorst)}</td>
+                        <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${getBadgeHtml(healthWorst)}</td>
+                        <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${getBadgeHtml(capabilityWorst)}</td>
+                        <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${getBadgeHtml(autoWorst)}</td>
+                        <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${getBadgeHtml(compWorst)}</td>
+                        <td class="px-3 py-2.5">${warningsHtml}</td>
+                    </tr>
+                `;
+            });
+            
+            const tableHtml = `
+                <div class="col-span-full rounded-tremor-default border border-tremor-border bg-white shadow-tremor-card flex flex-col">
+                    <div class="px-6 py-3 border-b border-tremor-border flex justify-end gap-2 bg-gray-50 rounded-t-tremor-default" data-html2canvas-ignore>
+                        <button onclick="copyTableAsText()" class="text-xs bg-white border border-tremor-border text-tremor-content-strong hover:bg-gray-50 px-3 py-1.5 rounded-tremor-small shadow-sm transition-colors">Copy as Table</button>
+                    </div>
+                    
+                    <div id="overviewTableContent" class="bg-white rounded-b-tremor-default">
+                        <div class="px-6 py-4 border-b border-tremor-border">
+                            <h3 class="text-lg font-medium text-tremor-content-strong">All Projects Overview</h3>
+                            <p class="text-sm text-tremor-content-subtle mt-1">Consolidated view with early warning indicators. Click any project to view details.</p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-tremor-border">
+                                <thead class="bg-tremor-background-subtle">
+                                    <tr>
+                                        <th scope="col" class="w-80 px-3 py-2.5 text-left text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Project / Engagement</th>
+                                        <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">LOB Lead</th>
+                                        <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Delivery</th>
+                                        <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Program Health</th>
+                                        <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Capability</th>
+                                        <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Automation</th>
+                                        <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Compliance</th>
+                                        <th scope="col" class="px-3 py-2.5 text-left text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider w-full">Early Warnings</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-tremor-border bg-white">
+                                    ${tableRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('summaryCardsContainer').className = "grid grid-cols-1 gap-6";
+            document.getElementById('summaryCardsContainer').innerHTML = tableHtml;
+        }
+
+        // --- Export Functions ---
+        async function copyTableAsImage() {
+            const tableContainer = document.getElementById('overviewTableContent');
+            if(!tableContainer) return;
+            
+            // Add a subtle border to the snapshot so it looks like a clean card in email
+            const originalBorder = tableContainer.style.border;
+            tableContainer.style.border = "1px solid #e5e7eb";
+            
+            try {
+                const canvas = await html2canvas(tableContainer, {
+                    scale: 2, 
+                    backgroundColor: "#ffffff",
+                    useCORS: true
+                });
+                tableContainer.style.border = originalBorder; // restore
+                
+                canvas.toBlob(async (blob) => {
+                    try {
+                        const item = new ClipboardItem({ "image/png": blob });
+                        await navigator.clipboard.write([item]);
+                        alert("Image copied to clipboard! You can now paste it into your email.");
+                    } catch (err) {
+                        console.error(err);
+                        alert("Failed to copy image to clipboard. Your browser might not support this feature.");
+                    }
+                });
+            } catch (err) {
+                console.error("Error generating image:", err);
+                tableContainer.style.border = originalBorder; // restore
+                alert("Failed to generate image.");
+            }
+        }
+
+        async function downloadTableAsImage() {
+            const tableContainer = document.getElementById('overviewTableContent');
+            if(!tableContainer) return;
+            
+            const originalBorder = tableContainer.style.border;
+            tableContainer.style.border = "1px solid #e5e7eb";
+
+            try {
+                const canvas = await html2canvas(tableContainer, {
+                    scale: 2,
+                    backgroundColor: "#ffffff",
+                    useCORS: true
+                });
+                tableContainer.style.border = originalBorder;
+                
+                const link = document.createElement('a');
+                link.download = 'All_Projects_Overview.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (err) {
+                console.error("Error generating image:", err);
+                tableContainer.style.border = originalBorder;
+                alert("Failed to generate image.");
+            }
+        }
+
+        function copyTableAsText() {
+            const tableContainer = document.getElementById('overviewTableContent');
+            if(!tableContainer) return;
+
+            const tableEl = tableContainer.querySelector('table');
+            if(!tableEl) return;
+
+            const tempDiv = document.createElement('div');
+            const tableClone = tableEl.cloneNode(true);
+            
+            tableClone.style.borderCollapse = "collapse";
+            tableClone.style.width = "100%";
+            tableClone.style.fontFamily = "sans-serif, Arial";
+            tableClone.style.border = "1px solid #e5e7eb";
+            
+            const ths = tableClone.querySelectorAll('th');
+            ths.forEach(th => {
+                th.style.borderBottom = "1px solid #e5e7eb";
+                th.style.textAlign = "left";
+                th.style.padding = "8px 12px";
+                th.style.backgroundColor = "#f9fafb";
+                th.style.color = "#374151";
+                th.style.fontSize = "12px";
+            });
+            
+            const tds = tableClone.querySelectorAll('td');
+            tds.forEach(td => {
+                td.style.borderBottom = "1px solid #e5e7eb";
+                td.style.padding = "8px 12px";
+                td.style.fontSize = "14px";
+            });
+
+            tempDiv.appendChild(tableClone);
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
+            document.body.appendChild(tempDiv);
+
+            const range = document.createRange();
+            range.selectNodeContents(tempDiv);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            
+            try {
+                document.execCommand('copy');
+                alert("Table copied as text/HTML! You can now paste it into your email.");
+            } catch (err) {
+                console.error('Failed to copy', err);
+                alert("Failed to copy table text.");
+            }
+            
+            document.body.removeChild(tempDiv);
+        }
+    </script>
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Login to Dashboard</h3>
+                <div class="mt-2 px-7 py-3">
+                    <input type="text" id="username" class="mb-3 px-3 py-2 border rounded w-full" placeholder="Username" />
+                    <input type="password" id="password" class="mb-3 px-3 py-2 border rounded w-full" placeholder="Password" />
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="loginBtn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                        Login
+                    </button>
+                    <button id="registerBtn" class="mt-2 px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
+                        Register
+                    </button>
+                    <button id="closeLoginModalBtn" class="mt-2 px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                        Cancel
+                    </button>
+                    <p id="loginError" class="text-red-500 text-xs mt-2 hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('closeLoginModalBtn').addEventListener('click', () => { document.getElementById('loginModal').classList.add('hidden'); document.getElementById('loginError').classList.add('hidden'); });
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('loginBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Authenticating...`;
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            document.getElementById('loginError').classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('username', document.getElementById('username').value);
+            formData.append('password', document.getElementById('password').value);
+            try {
+                let res;
+                try {
+                    res = await fetch('http://localhost:8000/token', { method: 'POST', body: formData });
+                    if(res.status >= 500) throw new Error("DB sleep timeout");
+                } catch(err) {
+                    // DB likely asleep. Wait for it to wake up and try again.
+                    btn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Waking up DB (takes ~5s)...';
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    btn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Authenticating...';
+                    res = await fetch('http://localhost:8000/token', { method: 'POST', body: formData });
+                }
+
+                if(res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('token', data.access_token);
+                    
+                    // fetch data after login while loader still spins
+                    await fetchUserMe();
+                    await fetchDataFromAPI();
+                    
+                    document.getElementById('loginModal').classList.add('hidden');
+                } else {
+                    document.getElementById('loginError').textContent = 'Invalid credentials';
+                    document.getElementById('loginError').classList.remove('hidden');
+                }
+            } catch(e) {
+                console.error(e);
+                document.getElementById('loginError').textContent = 'Connection error';
+                document.getElementById('loginError').classList.remove('hidden');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        });
+
+let userRole = null;
+        let currentUpdateTab = 'metrics';
+
+        const friendlyNames = {
+            'spAssigned': 'Story Points Assigned',
+            'spCompleted': 'Story Points Completed',
+            'usAssigned': 'User Stories Assigned',
+            'usCompleted': 'User Stories Completed',
+            'usPushed': 'User Stories Pushed',
+            'defectLeakage': 'Defect Leakage (%)',
+            'prodIncidents': 'Production Incidents',
+            'openRisks': 'Open Risks',
+            'escalations': 'Escalations',
+            'autoCoverage': 'Automation Coverage (%)',
+            'autoStability': 'Automation Stability (%)',
+            'autoToolsReq': 'Automation Tools Gap',
+            'buildToolsReq': 'Build Tools Gap',
+            'sowMilestones': 'SOW Milestones',
+            'regRunTime': 'Regression Run Time',
+            'regExecTimeNoAuto': 'Regression Exec Time (No Auto)',
+            'autoBugs': 'Automation Bugs',
+            'kt': 'Knowledge Transfer',
+            'assets': 'Assets Created',
+            'usAssignedPts': 'US Assigned Details',
+            'defectPts': 'Defect Details',
+            'incidentPts': 'Incident Details',
+            'riskPts': 'Risk Details',
+            'sowPts': 'SOW Details',
+            'escalationPts': 'Escalation Details',
+            'autoToolPts': 'Auto Tool Details',
+            'buildToolPts': 'Build Tool Details',
+            'cloudProf': 'Cloud Proficiency',
+            'cicdSetup': 'CI/CD Setup',
+            'ktPrep': 'KT Preparation',
+            'autoBugsPts': 'Auto Bugs Details',
+            'cicdMat': 'CI/CD Maturity',
+            'assetPts': 'Asset Details',
+            'deloitteTime': 'Deloitte Time',
+            'tenroxTime': 'Tenrox Time',
+            'catManager': 'CAT Manager',
+            'engagementCode': 'Engagement Code',
+            'lobLead': 'LOB Lead',
+            'processComp': 'Process Compliance (%)'
+        };
+
+        function getFriendlyName(key) {
+            let label = key;
+            if (key.endsWith('_expected')) {
+                const base = key.replace('_expected', '');
+                label = (friendlyNames[base] || base) + ' (Expected)';
+            } else if (key.endsWith('_variance')) {
+                const base = key.replace('_variance', '');
+                label = (friendlyNames[base] || base) + ' (Variance)';
+            } else {
+                label = friendlyNames[key] || key;
+            }
+            if (label === key) {
+                label = label.replace(/([A-Z])/g, ' $1').replace(/^./, function(str){ return str.toUpperCase(); });
+            }
+            return label;
+        }
+
+        async function fetchUserMe() {
+            const token = localStorage.getItem('token');
+            if(!token) return;
+            try {
+                const res = await fetch('http://localhost:8000/users/me', { headers: { 'Authorization': 'Bearer ' + token } });
+                if(res.ok) {
+                    const user = await res.json();
+                    userRole = user.role;
+                    document.getElementById('displayUsername').textContent = user.username;
+                    document.getElementById('displayRole').textContent = user.role.replace('_', ' ');
+                    document.getElementById('userInfoDisplay').classList.remove('hidden');
+                    document.getElementById('userInfoDisplay').classList.add('flex');
+                    document.getElementById('updateDataBtn').classList.remove('hidden');
+                    document.getElementById('logoutBtn').classList.remove('hidden');
+                    document.getElementById('navLoginBtn').classList.add('hidden');
+                    if(userRole === 'admin') {
+                        document.getElementById('tabConfigs').classList.remove('hidden');
+                    }
+                } else if (res.status === 401) {
+                    localStorage.removeItem('token');
+                    document.getElementById('navLoginBtn').classList.remove('hidden');
+                    document.getElementById('dashboardWrapper').classList.add('hidden');
+                    document.getElementById('dashboardWrapper').classList.remove('flex');
+                    document.getElementById('loggedOutState').classList.remove('hidden');
+                    document.getElementById('loggedOutState').classList.add('flex');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        document.getElementById('navLoginBtn').addEventListener('click', () => {
+            document.getElementById('loginModal').classList.remove('hidden');
+        });
+
+        document.getElementById('updateDataBtn').addEventListener('click', () => {
+            document.getElementById('dashboardWrapper').classList.add('hidden');
+            document.getElementById('dashboardWrapper').classList.remove('flex');
+            document.getElementById('emptyState').classList.add('hidden');
+                    document.getElementById('emptyState').classList.remove('flex');
+document.getElementById('loggedOutState').classList.add('hidden');
+            document.getElementById('loggedOutState').classList.remove('flex');
+            document.getElementById('updateWrapper').classList.remove('hidden');
+            document.getElementById('updateWrapper').classList.add('flex');
+            document.getElementById('updateDataBtn').classList.add('hidden');
+            document.getElementById('backToDashBtn').classList.remove('hidden');
+            
+            const sel = document.getElementById('updateTeamSelect');
+            sel.innerHTML = '';
+            globalData.metrics.forEach(m => {
+                let opt = document.createElement('option');
+                opt.value = m.team_id;
+                opt.textContent = m.engagement;
+                sel.appendChild(opt);
+            });
+            renderUpdateForm();
+        });
+
+        document.getElementById('backToDashBtn').addEventListener('click', () => {
+            document.getElementById('updateWrapper').classList.add('hidden');
+            document.getElementById('updateWrapper').classList.remove('flex');
+            document.getElementById('dashboardWrapper').classList.remove('hidden');
+            document.getElementById('dashboardWrapper').classList.add('flex');
+            document.getElementById('updateDataBtn').classList.remove('hidden');
+            document.getElementById('backToDashBtn').classList.add('hidden');
+            fetchDataFromAPI();
+        });
+
+        document.getElementById('updateTeamSelect').addEventListener('change', renderUpdateForm);
+
+        ['tabMetrics', 'tabDetails', 'tabConfigs'].forEach(tab => {
+            document.getElementById(tab).addEventListener('click', (e) => {
+                ['tabMetrics', 'tabDetails', 'tabConfigs'].forEach(t => {
+                    document.getElementById(t).classList.remove('border-b-2', 'border-tremor-brand-DEFAULT', 'text-tremor-brand-DEFAULT');
+                    document.getElementById(t).classList.add('text-tremor-content');
+                });
+                e.target.classList.remove('text-tremor-content');
+                e.target.classList.add('border-b-2', 'border-tremor-brand-DEFAULT', 'text-tremor-brand-DEFAULT');
+                currentUpdateTab = tab.replace('tab', '').toLowerCase();
+                renderUpdateForm();
+            });
+        });
+
+        function renderUpdateForm() {
+            const container = document.getElementById('updateFormContainer');
+            container.innerHTML = '';
+            const teamId = document.getElementById('updateTeamSelect').value;
+            if(!teamId) return;
+
+            const metric = globalData.metrics.find(m => m.team_id == teamId) || {};
+            const detail = globalData.details.find(d => d.team_id == teamId) || {};
+            
+            const METRIC_SECTIONS = {
+                'Delivery': ['delivery_sp_assigned', 'delivery_sp_completed', 'delivery_us_pushed', 'delivery_us_assigned', 'delivery_us_completed'],
+                'Program Health': ['health_overall', 'health_delivery', 'health_quality', 'health_automation', 'health_compliance'],
+                'Quality': ['quality_uat_defects', 'quality_prod_defects', 'quality_bugs_pushed'],
+                'Capability & Gaps': ['capability_primary', 'capability_secondary'],
+                'Automation': ['automation_manual_hrs', 'automation_automated_hrs', 'automation_coverage'],
+                'Compliance': ['compliance_trainings', 'compliance_timesheet'],
+                'Problem Statement & Effort': ['problem_tickets', 'effort_saved_hrs']
+            };
+
+            const DETAIL_SECTIONS = {
+                'General Information': ['catManager', 'engagementCode'],
+                'Delivery Details': ['details_delivery'],
+                'Program Health Details': ['details_health'],
+                'Quality Details': ['details_quality'],
+                'Capability Details': ['details_capability'],
+                'Automation Details': ['details_automation'],
+                'Compliance Details': ['details_compliance'],
+                'Problem Statement Details': ['details_problem']
+            };
+
+            const CONFIG_SECTIONS = {
+                'Delivery Rules': ['delivery_sp_ratio', 'delivery_us_ratio', 'delivery_us_pushed'],
+                'Quality Rules': ['quality_uat_defects', 'quality_prod_defects'],
+                'Automation Rules': ['automation_coverage'],
+                'Compliance Rules': ['compliance_trainings', 'compliance_timesheet']
+            };
+
+            let sections = {};
+            let sourceData = {};
+
+            if(currentUpdateTab === 'metrics') {
+                sections = METRIC_SECTIONS;
+                sourceData = { ...metric };
+            } else if (currentUpdateTab === 'details') {
+                sections = DETAIL_SECTIONS;
+                sourceData = { ...detail };
+            } else if (currentUpdateTab === 'configs') {
+                sections = CONFIG_SECTIONS;
+                const engagement = metric.engagement;
+                const conf = globalData.ragConfig[engagement] || {};
+                // Flatten configs
+                Object.keys(conf).forEach(k => {
+                    if(k !== 'type' && conf[k] && typeof conf[k] === 'object') {
+                        sourceData[k + '_expected'] = conf[k].expected;
+                        sourceData[k + '_variance'] = conf[k].variance;
+                    }
+                });
+            }
+
+            // Render Sections
+            Object.keys(sections).forEach(sectionTitle => {
+                const keys = sections[sectionTitle];
+                let hasFields = false;
+                
+                let actualKeysToRender = [];
+                if (currentUpdateTab === 'configs') {
+                    keys.forEach(k => {
+                        actualKeysToRender.push(k + '_expected');
+                        actualKeysToRender.push(k + '_variance');
+                    });
+                } else {
+                    actualKeysToRender = keys;
+                }
+                
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'mb-6 bg-gray-50 p-4 rounded-tremor-default border border-tremor-border';
+                
+                const header = document.createElement('h3');
+                header.className = 'text-sm font-semibold text-tremor-content-strong mb-4 pb-2 border-b border-tremor-border';
+                header.textContent = sectionTitle;
+                sectionDiv.appendChild(header);
+
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
+                
+                actualKeysToRender.forEach(k => {
+                    const div = document.createElement('div');
+                    // For details lists, use textarea and parse JSON array to newlines
+                    let val = sourceData[k] !== null && sourceData[k] !== undefined ? sourceData[k] : '';
+                    let isTextarea = currentUpdateTab === 'details' && k.startsWith('details_');
+                    
+                    if(isTextarea && val && typeof val === 'string' && val.startsWith('[')) {
+                        try {
+                            const parsed = JSON.parse(val);
+                            if(Array.isArray(parsed)) val = parsed.join('\n');
+                        } catch(e) {}
+                    }
+                    
+                    div.innerHTML = `<label class="block text-xs text-tremor-content font-medium mb-1">${getFriendlyName(k)}</label>`;
+                    if(isTextarea) {
+                        div.innerHTML += `<textarea id="input_${k}" rows="3" class="w-full border border-tremor-border rounded px-3 py-2 text-sm text-gray-700 shadow-sm focus:ring-tremor-brand-DEFAULT focus:border-tremor-brand-DEFAULT">${val}</textarea>`;
+                        div.className = 'sm:col-span-2'; // full width for textareas
+                    } else {
+                        div.innerHTML += `<input type="text" id="input_${k}" value="${val}" class="w-full border border-tremor-border rounded px-3 py-2 text-sm text-gray-700 shadow-sm focus:ring-tremor-brand-DEFAULT focus:border-tremor-brand-DEFAULT">`;
+                    }
+                    grid.appendChild(div);
+                });
+                
+                sectionDiv.appendChild(grid);
+                container.appendChild(sectionDiv);
+            });
+        }
+
+        document.getElementById('saveUpdateBtn').addEventListener('click', async () => {
+            const teamId = document.getElementById('updateTeamSelect').value;
+            if(!teamId) return;
+            
+            const payload = {};
+            const inputs = document.getElementById('updateFormContainer').querySelectorAll('input, textarea');
+            inputs.forEach(input => {
+                const k = input.id.replace('input_', '');
+                let val = input.value === '' ? null : input.value;
+                
+                // If it is a details list textarea, convert back to JSON array string
+                if (currentUpdateTab === 'details' && k.startsWith('details_') && val) {
+                    const lines = val.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                    val = JSON.stringify(lines);
+                }
+                
+                payload[k] = val;
+            });
+
+            const token = localStorage.getItem('token');
+            const url = "http://localhost:8000/" + (currentUpdateTab === 'configs' ? 'teams/' + teamId + '/configs' : currentUpdateTab + '/' + teamId);
+
+            try {
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const msgEl = document.getElementById('updateMsg');
+                msgEl.classList.remove('hidden');
+                if(res.ok) {
+                    msgEl.textContent = 'Saved successfully!';
+                    msgEl.className = 'text-sm mt-2 text-green-600 font-medium';
+                    const [mRes, dRes, cRes] = await Promise.all([
+                        fetch('http://localhost:8000/metrics', { headers: { 'Authorization': 'Bearer ' + token } }),
+                        fetch('http://localhost:8000/details', { headers: { 'Authorization': 'Bearer ' + token } }),
+                        fetch('http://localhost:8000/configs', { headers: { 'Authorization': 'Bearer ' + token } })
+                    ]);
+                    globalData.metrics = await mRes.json();
+                    globalData.details = await dRes.json();
+                    globalData.ragConfig = await cRes.json();
+                    
+                    sessionStorage.setItem('dashboardData', JSON.stringify({
+                        metrics: globalData.metrics,
+                        details: globalData.details,
+                        ragConfig: globalData.ragConfig
+                    }));
+                    sessionStorage.setItem('dashboardTimestamp', Date.now().toString());
+                    
+                    // Force refresh main view
+                    renderAll();
+                } else {
+                    msgEl.textContent = 'Error saving data.';
+                    msgEl.className = 'text-sm mt-2 text-red-600 font-medium';
+                }
+                setTimeout(() => { msgEl.classList.add('hidden'); }, 3000);
+            } catch(e) {
+                console.error(e);
+            }
+        });
+
+async function fetchDataFromAPI(forceRefresh = false) {
+            const token = localStorage.getItem('token');
+            const now = Date.now();
+            const cacheTime = sessionStorage.getItem('dashboardTimestamp');
+            
+            if (!forceRefresh && cacheTime && (now - parseInt(cacheTime) < 300000)) { // 5 minutes cache
+                const cachedData = sessionStorage.getItem('dashboardData');
+                if (cachedData) {
+                    const parsed = JSON.parse(cachedData);
+                    globalData.metrics = parsed.metrics;
+                    globalData.details = parsed.details;
+                    globalData.ragConfig = parsed.ragConfig;
+                    
+                    document.getElementById('emptyState').classList.add('hidden');
+                    document.getElementById('emptyState').classList.remove('flex');
+document.getElementById('loggedOutState').classList.add('hidden');
+                    document.getElementById('loggedOutState').classList.remove('flex');
+                    document.getElementById('dashboardWrapper').classList.remove('hidden');
+                    document.getElementById('dashboardWrapper').classList.add('flex');
+                    
+                    updateDropdown();
+                    renderAll();
+                    
+                    document.getElementById('lastUpdated').textContent = 'Refreshed (Cache): ' + new Date().toLocaleTimeString();
+                    return;
+                }
+            }
+
+            try {
+                const [metricsRes, detailsRes, configsRes] = await Promise.all([
+                    fetch('http://localhost:8000/metrics', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch('http://localhost:8000/details', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch('http://localhost:8000/configs', { headers: { 'Authorization': 'Bearer ' + token } })
+                ]);
+                
+                if (metricsRes.ok && detailsRes.ok && configsRes.ok) {
+                    const metrics = await metricsRes.json();
+                    const details = await detailsRes.json();
+                    const configs = await configsRes.json();
+                    
+                    globalData.metrics = metrics;
+                    globalData.details = details;
+                    globalData.ragConfig = configs;
+                    
+                    sessionStorage.setItem('dashboardData', JSON.stringify({
+                        metrics: metrics,
+                        details: details,
+                        ragConfig: configs
+                    }));
+                    sessionStorage.setItem('dashboardTimestamp', Date.now().toString());
+                    
+                    document.getElementById('emptyState').classList.add('hidden');
+                    document.getElementById('emptyState').classList.remove('flex');
+document.getElementById('loggedOutState').classList.add('hidden');
+                    document.getElementById('loggedOutState').classList.remove('flex');
+                    document.getElementById('dashboardWrapper').classList.remove('hidden');
+                    document.getElementById('dashboardWrapper').classList.add('flex');
+                    
+                    updateDropdown();
+                    renderAll();
+                    
+                    document.getElementById('lastUpdated').textContent = 'Refreshed (API): ' + new Date().toLocaleTimeString();
+                } else if (metricsRes.status === 401 || detailsRes.status === 401) {
+                    localStorage.removeItem('token');
+                    document.getElementById('navLoginBtn').classList.remove('hidden');
+                    document.getElementById('dashboardWrapper').classList.add('hidden');
+                    document.getElementById('dashboardWrapper').classList.remove('flex');
+                    document.getElementById('emptyState').classList.add('hidden');
+                    document.getElementById('emptyState').classList.remove('flex');
+document.getElementById('loggedOutState').classList.remove('hidden');
+                    document.getElementById('loggedOutState').classList.add('flex');
+                }
+            } catch(e) {
+                console.error('Error fetching data:', e);
+            }
+        }
+        
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            try {
+                const res = await fetch('http://localhost:8000/register', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, role: 'editor' })
+                });
+                if(res.ok) {
+                    alert('Registration successful! You can now login.');
+                } else {
+                    const error = await res.json();
+                    document.getElementById('loginError').textContent = error.detail || 'Registration failed';
+                    document.getElementById('loginError').classList.remove('hidden');
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        });
+        // Show login modal on load if not logged in
+        window.addEventListener('DOMContentLoaded', async () => {
+            if(!localStorage.getItem('token')) {
+                document.getElementById('navLoginBtn').classList.remove('hidden');
+                document.getElementById('dashboardWrapper').classList.add('hidden');
+                document.getElementById('dashboardWrapper').classList.remove('flex');
+                document.getElementById('emptyState').classList.add('hidden');
+                    document.getElementById('emptyState').classList.remove('flex');
+document.getElementById('loggedOutState').classList.remove('hidden');
+                document.getElementById('loggedOutState').classList.add('flex');
+            } else {
+                await fetchUserMe();
+                fetchDataFromAPI();
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+

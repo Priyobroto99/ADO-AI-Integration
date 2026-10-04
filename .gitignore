@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+ss.png
+temp_*.html
+temp_*.js
+debug_*.txt
+current_front.html
+plan.md
