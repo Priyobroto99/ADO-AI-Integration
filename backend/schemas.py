@@ -23,6 +23,19 @@ class TeamBase(BaseModel):
 
 class TeamResponse(TeamBase):
     id: int
+    ado_org: Optional[str] = None
+    ado_project: Optional[str] = None
+    ado_team: Optional[str] = None
+    # We do NOT return the PAT in the response for security reasons
+
+    class Config:
+        from_attributes = True
+
+class ADOConfigUpdate(BaseModel):
+    ado_org: Optional[str] = None
+    ado_project: Optional[str] = None
+    ado_team: Optional[str] = None
+    ado_pat: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -62,6 +75,7 @@ class TeamConfigResponse(TeamConfigBase):
 class MetricBase(BaseModel):
     engagement: str
     spoc: str
+    sprint: Optional[str] = None
     spAssigned: Optional[float] = None
     spCompleted: Optional[float] = None
     usAssigned: Optional[float] = None
@@ -91,6 +105,7 @@ class MetricResponse(MetricBase):
 class DetailBase(BaseModel):
     engagement: str
     spoc: str
+    sprint: Optional[str] = None
     usAssignedPts: Optional[str] = None
     defectPts: Optional[str] = None
     incidentPts: Optional[str] = None

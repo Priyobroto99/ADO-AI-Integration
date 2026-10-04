@@ -10,3 +10,5 @@ python-multipart
 pydantic
 pandas
 openpyxl
+requests
+

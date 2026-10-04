@@ -81,7 +81,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 
 @app.get("/metrics", response_model=list[schemas.MetricResponse])
 def get_metrics(db: Session = Depends(get_db)):
-    results = db.query(models.Metric, models.Team).join(models.Team).all()
+    results = db.query(models.Metric, models.Team).join(models.Team).order_by(models.Metric.id.desc()).all()
     metrics = []
     for metric, team in results:
         m_dict = {k: v for k, v in metric.__dict__.items() if not k.startswith('_')}
@@ -92,7 +92,7 @@ def get_metrics(db: Session = Depends(get_db)):
 
 @app.get("/details", response_model=list[schemas.DetailResponse])
 def get_details(db: Session = Depends(get_db)):
-    results = db.query(models.Detail, models.Team).join(models.Team).all()
+    results = db.query(models.Detail, models.Team).join(models.Team).order_by(models.Detail.id.desc()).all()
     details = []
     for detail, team in results:
         d_dict = {k: v for k, v in detail.__dict__.items() if not k.startswith('_')}
@@ -189,18 +189,61 @@ def update_team_config(team_id: int, config: schemas.TeamConfigCreate, db: Sessi
 def get_current_user_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
+from ado_client import ADOClient
+
+@app.put("/teams/{team_id}/ado-config")
+def update_ado_config(team_id: int, ado_config: schemas.ADOConfigUpdate, db: Session = Depends(get_db), user: models.User = Depends(auth.require_role(["admin", "team_spoc", "editor"]))):
+    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+        
+    if user.role == "team_spoc" and user.team_id != team_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    if ado_config.ado_org is not None:
+        team.ado_org = ado_config.ado_org
+    if ado_config.ado_project is not None:
+        team.ado_project = ado_config.ado_project
+    if ado_config.ado_team is not None:
+        team.ado_team = ado_config.ado_team
+    if ado_config.ado_pat is not None:
+        team.ado_pat = ado_config.ado_pat
+        
+    db.commit()
+    return {"message": "ADO Config updated"}
+
+@app.get("/teams/{team_id}/ado-preview")
+def ado_preview(team_id: int, db: Session = Depends(get_db), user: models.User = Depends(auth.require_role(["admin", "team_spoc", "editor"]))):
+    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+        
+    if user.role == "team_spoc" and user.team_id != team_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    if not team.ado_org or not team.ado_project or not team.ado_pat or not team.ado_team:
+        raise HTTPException(status_code=400, detail="Incomplete ADO configuration for this team. Please configure ADO Settings first.")
+        
+    client = ADOClient(team.ado_org, team.ado_project, team.ado_pat, team.ado_team)
+    try:
+        preview_data = client.preview_sync()
+        return preview_data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.put("/metrics/{team_id}")
 def update_metrics(team_id: int, metric_data: schemas.MetricBase, db: Session = Depends(get_db), user: models.User = Depends(auth.require_role(["admin", "team_spoc", "editor"]))):
     if user.role == "team_spoc" and user.team_id != team_id:
         raise HTTPException(status_code=403, detail="Not authorized to update metrics for this team")
 
-    db_metric = db.query(models.Metric).filter(models.Metric.team_id == team_id).first()
+    sprint_name = metric_data.sprint or "Sprint 1"
+    db_metric = db.query(models.Metric).filter(models.Metric.team_id == team_id, models.Metric.sprint == sprint_name).first()
     if not db_metric:
-        db_metric = models.Metric(team_id=team_id)
+        db_metric = models.Metric(team_id=team_id, sprint=sprint_name)
         db.add(db_metric)
         
     for key, value in metric_data.dict(exclude_unset=True).items():
-        if key not in ['engagement', 'spoc']:
+        if key not in ['engagement', 'spoc', 'sprint']:
             setattr(db_metric, key, value)
             
     db.commit()
@@ -211,13 +254,14 @@ def update_details(team_id: int, detail_data: schemas.DetailBase, db: Session = 
     if user.role == "team_spoc" and user.team_id != team_id:
         raise HTTPException(status_code=403, detail="Not authorized to update details for this team")
 
-    db_detail = db.query(models.Detail).filter(models.Detail.team_id == team_id).first()
+    sprint_name = detail_data.sprint or "Sprint 1"
+    db_detail = db.query(models.Detail).filter(models.Detail.team_id == team_id, models.Detail.sprint == sprint_name).first()
     if not db_detail:
-        db_detail = models.Detail(team_id=team_id)
+        db_detail = models.Detail(team_id=team_id, sprint=sprint_name)
         db.add(db_detail)
         
     for key, value in detail_data.dict(exclude_unset=True).items():
-        if key not in ['engagement', 'spoc']:
+        if key not in ['engagement', 'spoc', 'sprint']:
             setattr(db_detail, key, value)
             
     db.commit()

@@ -15,6 +15,10 @@ class Team(Base):
     id = Column(Integer, primary_key=True, index=True)
     engagement = Column(String, unique=True, index=True)
     spoc = Column(String)
+    ado_org = Column(String, nullable=True)
+    ado_project = Column(String, nullable=True)
+    ado_team = Column(String, nullable=True)
+    ado_pat = Column(String, nullable=True)
 
 class TeamConfig(Base):
     __tablename__ = "team_configs"
@@ -48,6 +52,7 @@ class Metric(Base):
     __tablename__ = "metrics"
     id = Column(Integer, primary_key=True, index=True)
     team_id = Column(Integer, ForeignKey("teams.id"))
+    sprint = Column(String, default="Sprint 1")
     spAssigned = Column(Float)
     spCompleted = Column(Float)
     usAssigned = Column(Float)
@@ -72,6 +77,7 @@ class Detail(Base):
     __tablename__ = "details"
     id = Column(Integer, primary_key=True, index=True)
     team_id = Column(Integer, ForeignKey("teams.id"))
+    sprint = Column(String, default="Sprint 1")
     usAssignedPts = Column(String)
     defectPts = Column(String)
     incidentPts = Column(String)
