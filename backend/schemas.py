@@ -5,11 +5,14 @@ class UserCreate(BaseModel):
     username: str
     password: str
     role: str = "editor"
+    team_id: Optional[int] = None
+    new_team_name: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: int
     username: str
     role: str
+    team_id: Optional[int] = None
 
     class Config:
         from_attributes = True

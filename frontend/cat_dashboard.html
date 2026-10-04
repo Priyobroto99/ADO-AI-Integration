@@ -106,7 +106,7 @@
 
     <!-- Top Navigation Bar -->
     <header class="bg-white border-b border-tremor-border sticky top-0 z-50 shadow-sm opacity-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-[105.6rem] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center gap-5">
                     <div class="flex items-center gap-3">
@@ -155,6 +155,9 @@
                     <button id="navLoginBtn" class="bg-white text-gray-900 border border-gray-300 shadow-sm hover:bg-blue-600 hover:text-white font-medium rounded-md text-sm px-4 py-2 transition-colors flex items-center gap-2 hidden">
                         Login
                     </button>
+                    <button id="navOnboardBtn" class="bg-blue-50 text-blue-700 border border-blue-200 shadow-sm hover:bg-blue-600 hover:text-white hover:border-blue-600 font-medium rounded-md text-sm px-4 py-2 transition-colors flex items-center gap-2 hidden">
+                        Onboard SPOC
+                    </button>
                     <button id="updateDataBtn" class="bg-white border border-black text-black shadow-sm font-medium rounded-tremor-default text-sm px-4 py-2 transition-all duration-200 flex items-center gap-2 hidden hover:bg-blue-500 hover:border-transparent hover:text-white">
                         Update Data
                     </button>
@@ -171,7 +174,7 @@
     </header>
 
     <!-- Main Content Area -->
-    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
+    <main class="flex-grow w-full max-w-[105.6rem] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
         
         <!-- Empty State / Loading State -->
         
@@ -467,6 +470,11 @@
             window.location.reload();
         });
 
+        engagementSelect.addEventListener('change', (e) => {
+            currentEngagement = e.target.value;
+            renderAll();
+        });
+
         function updateDropdown() {
             engagementSelect.innerHTML = "";
             if(globalData.metrics.length === 0) return;
@@ -507,9 +515,7 @@
                 'defectLeakage',
                 'prodIncidents',
                 'openRisks',
-                'escalations',
-                'autoToolsReq',
-                'buildToolsReq'
+                'escalations'
             ];
             if (zeroGreenMetrics.includes(metric) && v === 0) {
                 return RAG.GREEN;
@@ -722,8 +728,8 @@
             const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
 
             document.getElementById('capabilityMetricsGrid').innerHTML = `
-                ${createCard("Automation Tool Proficiencies Required", m.autoToolsReq, 'autoToolsReq')}
-                ${createCard("Build Tool Proficiencies Required", m.buildToolsReq, 'buildToolsReq')}
+                ${createCard("Automation Tools Competency", m.autoToolsReq, 'autoToolsReq')}
+                ${createCard("Build Tools Competency", m.buildToolsReq, 'buildToolsReq')}
             `;
 
             document.getElementById('capabilityDetailsGrid').innerHTML = `
@@ -734,7 +740,7 @@
                 <div class="space-y-4">
                     ${createYesNoBadge("Cloud & DevOps Proficiencies (Azure/AWS)", d.cloudProf, getYesNoRag(d.cloudProf))}
                     ${createYesNoBadge("CI/CD Pipeline Setup Proficiency", d.cicdSetup, getYesNoRag(d.cicdSetup))}
-                    ${createYesNoBadge("KT Documentation Prepared", d.ktPrep)}
+                    ${createYesNoBadge("KT Videos/Documents Prepared", d.ktPrep)}
                 </div>
             `;
         }
@@ -746,10 +752,9 @@
             document.getElementById('automationMetricsGrid').innerHTML = `
                 ${createCard("Automation Coverage", m.autoCoverage, 'autoCoverage', "%")}
                 ${createCard("Automation Stability", m.autoStability, 'autoStability', "%")}
-                ${createCard("Knowledge Transfer", m.kt, RAG.NONE, "", "📊 Informational")}
-                ${createCard("Reusable Assets", m.assets, RAG.NONE, "", "📊 Informational")}
-                ${createCard("Regression Run Time", m.regRunTime, RAG.NONE, " hrs", "📈 Track Trend")}
-                ${createCard("Reg. Exec Time (No Auto)", m.regExecTimeNoAuto, RAG.NONE, " hrs", "📈 Track Trend")}
+                ${createCard("Reusable Assets Created", m.assets, RAG.NONE, "", "📊 Informational")}
+                ${createCard("Regression Run Time (hrs)", m.regRunTime, RAG.NONE, " hrs", "📈 Track Trend")}
+                ${createCard("Manual Test Execution time (hrs)", m.regExecTimeNoAuto, RAG.NONE, " hrs", "📈 Track Trend")}
                 ${createCard("Automation Bugs Reported", m.autoBugs, RAG.NONE)}
             `;
 
@@ -920,8 +925,8 @@
                 checkWarning('escalations', 'Escalations', m.escalations);
                 checkWarning('autoCoverage', 'Auto Coverage', m.autoCoverage);
                 checkWarning('autoStability', 'Auto Stability', m.autoStability);
-                checkWarning('autoToolsReq', 'Auto Tools Gap', m.autoToolsReq);
-                checkWarning('buildToolsReq', 'Build Tools Gap', m.buildToolsReq);
+                checkWarning('autoToolsReq', 'Auto Tools Competency', m.autoToolsReq);
+                checkWarning('buildToolsReq', 'Build Tools Competency', m.buildToolsReq);
                 if (getYesNoRag(d.cloudProf) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">Cloud Prof.</span>`);
                 if (getYesNoRag(d.cicdSetup) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">CI/CD Setup</span>`);
                 if (getYesNoRag(d.cicdMat) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">CI/CD Maturity</span>`);
@@ -940,7 +945,7 @@
                                 <span>${eng}</span>
                             </div>
                         </td>
-                        <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${d.lobLead || '--'}</td>
+                        <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${m.spoc || '--'}</td><td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${d.lobLead || '--'}</td>
                         <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${getBadgeHtml(deliveryWorst)}</td>
                         <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${getBadgeHtml(healthWorst)}</td>
                         <td class="whitespace-nowrap px-3 py-2.5 text-sm text-tremor-content text-center">${getBadgeHtml(capabilityWorst)}</td>
@@ -967,7 +972,7 @@
                                 <thead class="bg-tremor-background-subtle">
                                     <tr>
                                         <th scope="col" class="w-80 px-3 py-2.5 text-left text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Project / Engagement</th>
-                                        <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">LOB Lead</th>
+                                        <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">SPOC</th><th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">LOB Lead</th>
                                         <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Delivery</th>
                                         <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Program Health</th>
                                         <th scope="col" class="px-3 py-2.5 text-center text-xs font-medium text-tremor-content-emphasis uppercase tracking-wider">Capability</th>
@@ -1116,18 +1121,128 @@
                     <button id="loginBtn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
                         Login
                     </button>
-                    <button id="registerBtn" class="mt-2 px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
-                        Register
-                    </button>
                     <button id="closeLoginModalBtn" class="mt-2 px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300">
                         Cancel
                     </button>
-                    <p id="loginError" class="text-red-500 text-xs mt-2 hidden"></p>
                 </div>
+                <p id="loginError" class="text-red-500 text-xs mt-2 hidden"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboard SPOC Modal -->
+    <div id="onboardModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Onboard as SPOC</h3>
+                <div class="mt-2 px-7 py-3">
+                    <input type="text" id="obUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md mb-3" placeholder="Username" />
+                    <input type="password" id="obPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md mb-3" placeholder="Password" />
+                    <select id="obTeamSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md mb-3">
+                        <option value="">-- Select Team --</option>
+                        <option value="NEW_TEAM">-- Create New Team --</option>
+                    </select>
+                    <input type="text" id="obNewTeamName" class="w-full px-3 py-2 border border-gray-300 rounded-md mb-3 hidden" placeholder="New Team Name (Engagement Code)" />
+                    <p id="obErrorMsg" class="text-xs text-red-500 hidden"></p>
+                    <p id="obSuccessMsg" class="text-xs text-green-500 hidden"></p>
+                </div>
+                <button id="submitOnboardBtn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                    Onboard
+                </button>
+                <button id="closeOnboardModalBtn" class="mt-2 px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    Cancel
+                </button>
             </div>
         </div>
     </div>
     <script>
+        document.getElementById('navOnboardBtn').addEventListener('click', async () => {
+            document.getElementById('onboardModal').classList.remove('hidden');
+            // Fetch teams to populate dropdown
+            try {
+                const res = await fetch('http://localhost:8000/teams');
+                const teams = await res.json();
+                const sel = document.getElementById('obTeamSelect');
+                // keep the first two options (Select Team and Create New Team)
+                sel.innerHTML = '<option value="">-- Select Team --</option><option value="NEW_TEAM">-- Create New Team --</option>';
+                teams.forEach(t => {
+                    let opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.engagement;
+                    sel.appendChild(opt);
+                });
+            } catch(e) {
+                console.error('Error fetching teams for onboard', e);
+            }
+        });
+
+        document.getElementById('closeOnboardModalBtn').addEventListener('click', () => {
+            document.getElementById('onboardModal').classList.add('hidden');
+            document.getElementById('obErrorMsg').classList.add('hidden');
+            document.getElementById('obSuccessMsg').classList.add('hidden');
+        });
+
+        document.getElementById('obTeamSelect').addEventListener('change', (e) => {
+            if (e.target.value === 'NEW_TEAM') {
+                document.getElementById('obNewTeamName').classList.remove('hidden');
+            } else {
+                document.getElementById('obNewTeamName').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('submitOnboardBtn').addEventListener('click', async () => {
+            const username = document.getElementById('obUsername').value;
+            const password = document.getElementById('obPassword').value;
+            const teamSelect = document.getElementById('obTeamSelect').value;
+            const newTeamName = document.getElementById('obNewTeamName').value;
+            
+            const errMsg = document.getElementById('obErrorMsg');
+            const successMsg = document.getElementById('obSuccessMsg');
+            errMsg.classList.add('hidden');
+            successMsg.classList.add('hidden');
+
+            if (!username || !password || !teamSelect) {
+                errMsg.textContent = 'Please fill out all required fields.';
+                errMsg.classList.remove('hidden');
+                return;
+            }
+
+            const payload = { username, password, role: 'team_spoc' };
+            if (teamSelect === 'NEW_TEAM') {
+                if (!newTeamName) {
+                    errMsg.textContent = 'Please enter a new team name.';
+                    errMsg.classList.remove('hidden');
+                    return;
+                }
+                payload.new_team_name = newTeamName;
+            } else {
+                payload.team_id = parseInt(teamSelect);
+            }
+
+            try {
+                const res = await fetch('http://localhost:8000/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    successMsg.textContent = 'Onboarded successfully! You can now log in.';
+                    successMsg.classList.remove('hidden');
+                    setTimeout(() => {
+                        document.getElementById('onboardModal').classList.add('hidden');
+                        document.getElementById('navLoginBtn').click();
+                    }, 2000);
+                } else {
+                    const data = await res.json();
+                    errMsg.textContent = data.detail || 'Failed to onboard';
+                    errMsg.classList.remove('hidden');
+                }
+            } catch(e) {
+                errMsg.textContent = 'Connection error';
+                errMsg.classList.remove('hidden');
+            }
+        });
+
         document.getElementById('closeLoginModalBtn').addEventListener('click', () => { document.getElementById('loginModal').classList.add('hidden'); document.getElementById('loginError').classList.add('hidden'); });
 
         document.getElementById('loginBtn').addEventListener('click', async () => {
@@ -1179,6 +1294,7 @@
         });
 
 let userRole = null;
+let userTeamId = null;
         let currentUpdateTab = 'metrics';
 
         const friendlyNames = {
@@ -1193,14 +1309,13 @@ let userRole = null;
             'escalations': 'Escalations',
             'autoCoverage': 'Automation Coverage (%)',
             'autoStability': 'Automation Stability (%)',
-            'autoToolsReq': 'Automation Tools Gap',
-            'buildToolsReq': 'Build Tools Gap',
+            'autoToolsReq': 'Automation Tools Competency',
+            'buildToolsReq': 'Build Tools Competency',
             'sowMilestones': 'SOW Milestones',
-            'regRunTime': 'Regression Run Time',
-            'regExecTimeNoAuto': 'Regression Exec Time (No Auto)',
+            'regRunTime': 'Regression Run Time (hrs)',
+            'regExecTimeNoAuto': 'Manual Test Execution time (hrs)',
             'autoBugs': 'Automation Bugs',
-            'kt': 'Knowledge Transfer',
-            'assets': 'Assets Created',
+            'assets': 'Reusable Assets Created',
             'usAssignedPts': 'US Assigned Details',
             'defectPts': 'Defect Details',
             'incidentPts': 'Incident Details',
@@ -1211,7 +1326,7 @@ let userRole = null;
             'buildToolPts': 'Build Tool Details',
             'cloudProf': 'Cloud Proficiency',
             'cicdSetup': 'CI/CD Setup',
-            'ktPrep': 'KT Preparation',
+            'ktPrep': 'KT Videos/Documents Prepared',
             'autoBugsPts': 'Auto Bugs Details',
             'cicdMat': 'CI/CD Maturity',
             'assetPts': 'Asset Details',
@@ -1248,6 +1363,7 @@ let userRole = null;
                 if(res.ok) {
                     const user = await res.json();
                     userRole = user.role;
+                    userTeamId = user.team_id;
                     document.getElementById('displayUsername').textContent = user.username;
                     document.getElementById('displayRole').textContent = user.role.replace('_', ' ');
                     document.getElementById('userInfoDisplay').classList.remove('hidden');
@@ -1255,12 +1371,14 @@ let userRole = null;
                     document.getElementById('updateDataBtn').classList.remove('hidden');
                     document.getElementById('logoutBtn').classList.remove('hidden');
                     document.getElementById('navLoginBtn').classList.add('hidden');
+                    document.getElementById('navOnboardBtn').classList.add('hidden');
                     if(userRole === 'admin') {
                         document.getElementById('tabConfigs').classList.remove('hidden');
                     }
                 } else if (res.status === 401) {
                     localStorage.removeItem('token');
                     document.getElementById('navLoginBtn').classList.remove('hidden');
+                    document.getElementById('navOnboardBtn').classList.remove('hidden');
                     document.getElementById('dashboardWrapper').classList.add('hidden');
                     document.getElementById('dashboardWrapper').classList.remove('flex');
                     document.getElementById('loggedOutState').classList.remove('hidden');
@@ -1288,6 +1406,7 @@ document.getElementById('loggedOutState').classList.add('hidden');
             const sel = document.getElementById('updateTeamSelect');
             sel.innerHTML = '';
             globalData.metrics.forEach(m => {
+                if (userRole === 'team_spoc' && m.team_id !== userTeamId) return;
                 let opt = document.createElement('option');
                 opt.value = m.team_id;
                 opt.textContent = m.engagement;
@@ -1331,31 +1450,26 @@ document.getElementById('loggedOutState').classList.add('hidden');
             const detail = globalData.details.find(d => d.team_id == teamId) || {};
             
             const METRIC_SECTIONS = {
-                'Delivery': ['delivery_sp_assigned', 'delivery_sp_completed', 'delivery_us_pushed', 'delivery_us_assigned', 'delivery_us_completed'],
-                'Program Health': ['health_overall', 'health_delivery', 'health_quality', 'health_automation', 'health_compliance'],
-                'Quality': ['quality_uat_defects', 'quality_prod_defects', 'quality_bugs_pushed'],
-                'Capability & Gaps': ['capability_primary', 'capability_secondary'],
-                'Automation': ['automation_manual_hrs', 'automation_automated_hrs', 'automation_coverage'],
-                'Compliance': ['compliance_trainings', 'compliance_timesheet'],
-                'Problem Statement & Effort': ['problem_tickets', 'effort_saved_hrs']
+                'Delivery': ['spAssigned', 'spCompleted', 'usPushed', 'usAssigned', 'usCompleted'],
+                'Program Health': ['defectLeakage', 'prodIncidents', 'openRisks', 'escalations', 'sowMilestones'],
+                'Capability & Gaps': ['autoToolsReq', 'buildToolsReq'],
+                'Automation': ['autoCoverage', 'autoStability', 'regRunTime', 'regExecTimeNoAuto', 'autoBugs', 'assets']
             };
 
             const DETAIL_SECTIONS = {
-                'General Information': ['catManager', 'engagementCode'],
-                'Delivery Details': ['details_delivery'],
-                'Program Health Details': ['details_health'],
-                'Quality Details': ['details_quality'],
-                'Capability Details': ['details_capability'],
-                'Automation Details': ['details_automation'],
-                'Compliance Details': ['details_compliance'],
-                'Problem Statement Details': ['details_problem']
+                'General Information': ['catManager', 'engagementCode', 'lobLead'],
+                'Delivery Details': ['usAssignedPts'],
+                'Program Health Details': ['defectPts', 'incidentPts', 'riskPts', 'escalationPts', 'sowPts'],
+                'Capability Details': ['autoToolPts', 'buildToolPts', 'cloudProf', 'cicdSetup'],
+                'Automation Details': ['autoBugsPts', 'assetPts', 'ktPrep', 'cicdMat'],
+                'Compliance Details': ['deloitteTime', 'tenroxTime']
             };
 
             const CONFIG_SECTIONS = {
-                'Delivery Rules': ['delivery_sp_ratio', 'delivery_us_ratio', 'delivery_us_pushed'],
-                'Quality Rules': ['quality_uat_defects', 'quality_prod_defects'],
-                'Automation Rules': ['automation_coverage'],
-                'Compliance Rules': ['compliance_trainings', 'compliance_timesheet']
+                'Delivery Rules': ['spAssigned', 'spCompleted', 'usPushed'],
+                'Quality & Health Rules': ['defectLeakage', 'prodIncidents', 'openRisks', 'escalations'],
+                'Automation Rules': ['autoCoverage', 'autoStability'],
+                'Capability Rules': ['autoToolsReq', 'buildToolsReq']
             };
 
             let sections = {};
@@ -1408,23 +1522,31 @@ document.getElementById('loggedOutState').classList.add('hidden');
                 
                 actualKeysToRender.forEach(k => {
                     const div = document.createElement('div');
-                    // For details lists, use textarea and parse JSON array to newlines
                     let val = sourceData[k] !== null && sourceData[k] !== undefined ? sourceData[k] : '';
-                    let isTextarea = currentUpdateTab === 'details' && k.startsWith('details_');
                     
-                    if(isTextarea && val && typeof val === 'string' && val.startsWith('[')) {
-                        try {
-                            const parsed = JSON.parse(val);
-                            if(Array.isArray(parsed)) val = parsed.join('\n');
-                        } catch(e) {}
+                    if (currentUpdateTab === 'details' && k.endsWith('Pts') && (val === 0 || val === '0')) {
+                        val = '';
                     }
-                    
+
                     div.innerHTML = `<label class="block text-xs text-tremor-content font-medium mb-1">${getFriendlyName(k)}</label>`;
-                    if(isTextarea) {
-                        div.innerHTML += `<textarea id="input_${k}" rows="3" class="w-full border border-tremor-border rounded px-3 py-2 text-sm text-gray-700 shadow-sm focus:ring-tremor-brand-DEFAULT focus:border-tremor-brand-DEFAULT">${val}</textarea>`;
-                        div.className = 'sm:col-span-2'; // full width for textareas
+                    
+                    const yesNoFields = ['cloudProf', 'cicdSetup', 'ktPrep', 'cicdMat', 'deloitteTime', 'tenroxTime'];
+                    if (yesNoFields.includes(k)) {
+                        let isYes = String(val).toLowerCase().trim() === 'yes' ? 'selected' : '';
+                        let isNo = String(val).toLowerCase().trim() === 'no' ? 'selected' : '';
+                        let isNA = String(val).toLowerCase().trim() === 'na' ? 'selected' : '';
+                        div.innerHTML += `<select id="input_${k}" class="w-full border border-tremor-border rounded px-3 py-2 text-sm text-gray-700 shadow-sm focus:ring-tremor-brand-DEFAULT focus:border-tremor-brand-DEFAULT">
+                            <option value="">-- Select --</option>
+                            <option value="Yes" ${isYes}>Yes</option>
+                            <option value="No" ${isNo}>No</option>
+                            <option value="NA" ${isNA}>NA</option>
+                        </select>`;
                     } else {
                         div.innerHTML += `<input type="text" id="input_${k}" value="${val}" class="w-full border border-tremor-border rounded px-3 py-2 text-sm text-gray-700 shadow-sm focus:ring-tremor-brand-DEFAULT focus:border-tremor-brand-DEFAULT">`;
+                        if (currentUpdateTab === 'details' && k.endsWith('Pts')) {
+                            div.innerHTML += `<p class="text-[10px] text-gray-500 mt-1">Pipe separated 'text 1|text2'</p>`;
+                            div.className = 'sm:col-span-2'; // full width
+                        }
                     }
                     grid.appendChild(div);
                 });
@@ -1439,19 +1561,21 @@ document.getElementById('loggedOutState').classList.add('hidden');
             if(!teamId) return;
             
             const payload = {};
-            const inputs = document.getElementById('updateFormContainer').querySelectorAll('input, textarea');
+            const inputs = document.getElementById('updateFormContainer').querySelectorAll('input, select');
             inputs.forEach(input => {
                 const k = input.id.replace('input_', '');
                 let val = input.value === '' ? null : input.value;
                 
-                // If it is a details list textarea, convert back to JSON array string
-                if (currentUpdateTab === 'details' && k.startsWith('details_') && val) {
-                    const lines = val.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-                    val = JSON.stringify(lines);
-                }
-                
                 payload[k] = val;
             });
+
+            if (currentUpdateTab === 'metrics' || currentUpdateTab === 'details') {
+                const metric = globalData.metrics.find(m => m.team_id == teamId);
+                if (metric) {
+                    payload['engagement'] = metric.engagement;
+                    payload['spoc'] = metric.spoc;
+                }
+            }
 
             const token = localStorage.getItem('token');
             const url = "http://localhost:8000/" + (currentUpdateTab === 'configs' ? 'teams/' + teamId + '/configs' : currentUpdateTab + '/' + teamId);
@@ -1476,6 +1600,8 @@ document.getElementById('loggedOutState').classList.add('hidden');
                     globalData.details = await dRes.json();
                     globalData.ragConfig = await cRes.json();
                     
+                    calculateProcessCompliance();
+
                     sessionStorage.setItem('dashboardData', JSON.stringify({
                         metrics: globalData.metrics,
                         details: globalData.details,
@@ -1483,8 +1609,9 @@ document.getElementById('loggedOutState').classList.add('hidden');
                     }));
                     sessionStorage.setItem('dashboardTimestamp', Date.now().toString());
                     
-                    // Force refresh main view
+                    // Force refresh main view and update form view
                     renderAll();
+                    renderUpdateForm();
                 } else {
                     msgEl.textContent = 'Error saving data.';
                     msgEl.className = 'text-sm mt-2 text-red-600 font-medium';
@@ -1494,6 +1621,24 @@ document.getElementById('loggedOutState').classList.add('hidden');
                 console.error(e);
             }
         });
+
+        function calculateProcessCompliance() {
+            if (!globalData.details) return;
+            globalData.details.forEach(d => {
+                let comp = 100;
+                let deloitte = d.deloitteTime ? String(d.deloitteTime).toLowerCase().trim() : '';
+                let tenrox = d.tenroxTime ? String(d.tenroxTime).toLowerCase().trim() : '';
+                
+                if (deloitte === 'no' || deloitte === '' || deloitte === 'null') {
+                    comp -= 50;
+                }
+                if (tenrox === 'no' || tenrox === '' || tenrox === 'null') {
+                    comp -= 50;
+                }
+                
+                d.processComp = Math.max(0, comp);
+            });
+        }
 
 async function fetchDataFromAPI(forceRefresh = false) {
             const token = localStorage.getItem('token');
@@ -1508,6 +1653,8 @@ async function fetchDataFromAPI(forceRefresh = false) {
                     globalData.details = parsed.details;
                     globalData.ragConfig = parsed.ragConfig;
                     
+                    calculateProcessCompliance();
+
                     document.getElementById('emptyState').classList.add('hidden');
                     document.getElementById('emptyState').classList.remove('flex');
 document.getElementById('loggedOutState').classList.add('hidden');
@@ -1538,6 +1685,8 @@ document.getElementById('loggedOutState').classList.add('hidden');
                     globalData.metrics = metrics;
                     globalData.details = details;
                     globalData.ragConfig = configs;
+
+                    calculateProcessCompliance();
                     
                     sessionStorage.setItem('dashboardData', JSON.stringify({
                         metrics: metrics,
@@ -1560,6 +1709,7 @@ document.getElementById('loggedOutState').classList.add('hidden');
                 } else if (metricsRes.status === 401 || detailsRes.status === 401) {
                     localStorage.removeItem('token');
                     document.getElementById('navLoginBtn').classList.remove('hidden');
+                    document.getElementById('navOnboardBtn').classList.remove('hidden');
                     document.getElementById('dashboardWrapper').classList.add('hidden');
                     document.getElementById('dashboardWrapper').classList.remove('flex');
                     document.getElementById('emptyState').classList.add('hidden');
@@ -1571,31 +1721,12 @@ document.getElementById('loggedOutState').classList.remove('hidden');
                 console.error('Error fetching data:', e);
             }
         }
-        
-        document.getElementById('registerBtn').addEventListener('click', async () => {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            try {
-                const res = await fetch('http://localhost:8000/register', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, role: 'editor' })
-                });
-                if(res.ok) {
-                    alert('Registration successful! You can now login.');
-                } else {
-                    const error = await res.json();
-                    document.getElementById('loginError').textContent = error.detail || 'Registration failed';
-                    document.getElementById('loginError').classList.remove('hidden');
-                }
-            } catch(e) {
-                console.error(e);
-            }
-        });
+        // Register button logic removed in favor of Onboard SPOC modal
         // Show login modal on load if not logged in
         window.addEventListener('DOMContentLoaded', async () => {
             if(!localStorage.getItem('token')) {
                 document.getElementById('navLoginBtn').classList.remove('hidden');
+                document.getElementById('navOnboardBtn').classList.remove('hidden');
                 document.getElementById('dashboardWrapper').classList.add('hidden');
                 document.getElementById('dashboardWrapper').classList.remove('flex');
                 document.getElementById('emptyState').classList.add('hidden');
@@ -1610,6 +1741,11 @@ document.getElementById('loggedOutState').classList.remove('hidden');
     </script>
 </body>
 </html>
+
+
+
+
+
 
 
 

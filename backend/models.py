@@ -8,6 +8,7 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String, default="editor")
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
 
 class Team(Base):
     __tablename__ = "teams"

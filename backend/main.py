@@ -23,8 +23,42 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
+        
+    team_id = user.team_id
+    if user.role == "team_spoc":
+        if team_id:
+            # Check if a SPOC already exists for this team
+            existing_spoc = db.query(models.User).filter(
+                models.User.team_id == team_id, 
+                models.User.role == "team_spoc"
+            ).first()
+            if existing_spoc:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="spoc already exists please ask admin to remove existing spoc before mapping new spoc to team"
+                )
+        elif user.new_team_name:
+            # Check if engagement already exists
+            existing_team = db.query(models.Team).filter(models.Team.engagement == user.new_team_name).first()
+            if existing_team:
+                raise HTTPException(status_code=400, detail="Team/Engagement already exists. Please select it from the list.")
+            
+            # Create the team
+            new_team = models.Team(engagement=user.new_team_name, spoc=user.username)
+            db.add(new_team)
+            db.commit()
+            db.refresh(new_team)
+            team_id = new_team.id
+        else:
+            raise HTTPException(status_code=400, detail="Must provide either team_id or new_team_name for a SPOC")
+
     hashed_password = auth.get_password_hash(user.password)
-    new_user = models.User(username=user.username, hashed_password=hashed_password, role=user.role)
+    new_user = models.User(
+        username=user.username, 
+        hashed_password=hashed_password, 
+        role=user.role,
+        team_id=team_id
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -108,8 +142,8 @@ def get_configs(db: Session = Depends(get_db)):
         "escalations": "lower",
         "autoCoverage": "higher",
         "autoStability": "higher",
-        "autoToolsReq": "lower",
-        "buildToolsReq": "lower"
+        "autoToolsReq": "higher",
+        "buildToolsReq": "higher"
     }
     
     result = {"Default": {}}
@@ -157,6 +191,9 @@ def get_current_user_me(current_user: models.User = Depends(auth.get_current_use
 
 @app.put("/metrics/{team_id}")
 def update_metrics(team_id: int, metric_data: schemas.MetricBase, db: Session = Depends(get_db), user: models.User = Depends(auth.require_role(["admin", "team_spoc", "editor"]))):
+    if user.role == "team_spoc" and user.team_id != team_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update metrics for this team")
+
     db_metric = db.query(models.Metric).filter(models.Metric.team_id == team_id).first()
     if not db_metric:
         db_metric = models.Metric(team_id=team_id)
@@ -171,6 +208,9 @@ def update_metrics(team_id: int, metric_data: schemas.MetricBase, db: Session = 
 
 @app.put("/details/{team_id}")
 def update_details(team_id: int, detail_data: schemas.DetailBase, db: Session = Depends(get_db), user: models.User = Depends(auth.require_role(["admin", "team_spoc", "editor"]))):
+    if user.role == "team_spoc" and user.team_id != team_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update details for this team")
+
     db_detail = db.query(models.Detail).filter(models.Detail.team_id == team_id).first()
     if not db_detail:
         db_detail = models.Detail(team_id=team_id)
