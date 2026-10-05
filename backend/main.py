@@ -191,6 +191,25 @@ def get_current_user_me(current_user: models.User = Depends(auth.get_current_use
 
 from ado_client import ADOClient
 
+@app.get("/sprints", response_model=list[schemas.SprintResponse])
+def get_sprints(db: Session = Depends(get_db)):
+    return db.query(models.Sprint).all()
+
+@app.post("/sprints", response_model=schemas.SprintResponse)
+def create_sprint(sprint_data: schemas.SprintCreate, db: Session = Depends(get_db), user: models.User = Depends(auth.require_role(["admin", "team_spoc", "editor"]))):
+    existing = db.query(models.Sprint).filter(models.Sprint.name == sprint_data.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Sprint with this name already exists")
+    new_sprint = models.Sprint(
+        name=sprint_data.name,
+        start_date=sprint_data.start_date,
+        end_date=sprint_data.end_date
+    )
+    db.add(new_sprint)
+    db.commit()
+    db.refresh(new_sprint)
+    return new_sprint
+
 @app.put("/teams/{team_id}/ado-config")
 def update_ado_config(team_id: int, ado_config: schemas.ADOConfigUpdate, db: Session = Depends(get_db), user: models.User = Depends(auth.require_role(["admin", "team_spoc", "editor"]))):
     team = db.query(models.Team).filter(models.Team.id == team_id).first()
@@ -208,6 +227,8 @@ def update_ado_config(team_id: int, ado_config: schemas.ADOConfigUpdate, db: Ses
         team.ado_team = ado_config.ado_team
     if ado_config.ado_pat is not None:
         team.ado_pat = ado_config.ado_pat
+    if ado_config.ado_iteration is not None:
+        team.ado_iteration = ado_config.ado_iteration
         
     db.commit()
     return {"message": "ADO Config updated"}
@@ -226,7 +247,7 @@ def ado_preview(team_id: int, db: Session = Depends(get_db), user: models.User =
         
     client = ADOClient(team.ado_org, team.ado_project, team.ado_pat, team.ado_team)
     try:
-        preview_data = client.preview_sync()
+        preview_data = client.preview_sync(team.ado_iteration)
         return preview_data
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -236,14 +257,17 @@ def update_metrics(team_id: int, metric_data: schemas.MetricBase, db: Session = 
     if user.role == "team_spoc" and user.team_id != team_id:
         raise HTTPException(status_code=403, detail="Not authorized to update metrics for this team")
 
-    sprint_name = metric_data.sprint or "Sprint 1"
-    db_metric = db.query(models.Metric).filter(models.Metric.team_id == team_id, models.Metric.sprint == sprint_name).first()
+    sprint_id = metric_data.sprint_id
+    if not sprint_id:
+        raise HTTPException(status_code=400, detail="sprint_id is required")
+
+    db_metric = db.query(models.Metric).filter(models.Metric.team_id == team_id, models.Metric.sprint_id == sprint_id).first()
     if not db_metric:
-        db_metric = models.Metric(team_id=team_id, sprint=sprint_name)
+        db_metric = models.Metric(team_id=team_id, sprint_id=sprint_id, sprint=metric_data.sprint)
         db.add(db_metric)
         
     for key, value in metric_data.dict(exclude_unset=True).items():
-        if key not in ['engagement', 'spoc', 'sprint']:
+        if key not in ['engagement', 'spoc', 'sprint_id']:
             setattr(db_metric, key, value)
             
     db.commit()
@@ -254,14 +278,17 @@ def update_details(team_id: int, detail_data: schemas.DetailBase, db: Session = 
     if user.role == "team_spoc" and user.team_id != team_id:
         raise HTTPException(status_code=403, detail="Not authorized to update details for this team")
 
-    sprint_name = detail_data.sprint or "Sprint 1"
-    db_detail = db.query(models.Detail).filter(models.Detail.team_id == team_id, models.Detail.sprint == sprint_name).first()
+    sprint_id = detail_data.sprint_id
+    if not sprint_id:
+        raise HTTPException(status_code=400, detail="sprint_id is required")
+
+    db_detail = db.query(models.Detail).filter(models.Detail.team_id == team_id, models.Detail.sprint_id == sprint_id).first()
     if not db_detail:
-        db_detail = models.Detail(team_id=team_id, sprint=sprint_name)
+        db_detail = models.Detail(team_id=team_id, sprint_id=sprint_id, sprint=detail_data.sprint)
         db.add(db_detail)
         
     for key, value in detail_data.dict(exclude_unset=True).items():
-        if key not in ['engagement', 'spoc', 'sprint']:
+        if key not in ['engagement', 'spoc', 'sprint_id']:
             setattr(db_detail, key, value)
             
     db.commit()

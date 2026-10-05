@@ -56,9 +56,26 @@ class ADOClient:
             
         return details_res.json().get("value", [])
 
-    def preview_sync(self):
+    def get_iteration_by_name(self, iteration_name: str):
+        url = f"{self.base_url}/{self.team}/_apis/work/teamsettings/iterations?api-version=6.0"
+        response = requests.get(url, auth=HTTPBasicAuth("", self.pat))
+        if response.status_code != 200:
+            raise Exception(f"Failed to fetch iterations: {response.text}")
+        data = response.json()
+        target = iteration_name.strip().lower().replace('/', '\\')
+        for it in data.get("value", []):
+            it_name = it.get("name", "").strip().lower().replace('/', '\\')
+            it_path = it.get("path", "").strip().lower().replace('/', '\\')
+            if it_name == target or it_path == target or it_path.endswith('\\' + target):
+                return it
+        raise Exception(f"Iteration '{iteration_name}' not found.")
+
+    def preview_sync(self, target_iteration_name=None):
         try:
-            iteration = self.get_current_iteration()
+            if target_iteration_name:
+                iteration = self.get_iteration_by_name(target_iteration_name)
+            else:
+                iteration = self.get_current_iteration()
             iteration_name = iteration["name"]
             iteration_path = iteration["path"]
             

@@ -12,7 +12,82 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">        document.getElementById('addSprintBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.remove('hidden');
+            document.getElementById('createSprintError').classList.add('hidden');
+        });
+
+        document.getElementById('closeSprintModalBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.add('hidden');
+        });
+
+        document.getElementById('submitSprintBtn').addEventListener('click', async () => {
+            const name = document.getElementById('newSprintName').value.trim();
+            const start = document.getElementById('newSprintStart').value;
+            const end = document.getElementById('newSprintEnd').value;
+            
+            if(!name) {
+                document.getElementById('createSprintError').textContent = "Sprint Name is required.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const btn = document.getElementById('submitSprintBtn');
+            btn.innerHTML = 'Creating...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('http://localhost:8000/sprints', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ name: name, start_date: start, end_date: end })
+                });
+
+                if(res.ok) {
+                    const newSprint = await res.json();
+                    globalData.sprints.push(newSprint);
+                    
+                    // Add to dropdowns
+                    const mainSel = document.getElementById('mainSprintSelect');
+                    const upSel = document.getElementById('updateSprintSelect');
+                    
+                    let opt1 = document.createElement('option');
+                    opt1.value = newSprint.id; opt1.textContent = newSprint.name;
+                    if(mainSel) mainSel.appendChild(opt1);
+                    
+                    let opt2 = document.createElement('option');
+                    opt2.value = newSprint.id; opt2.textContent = newSprint.name;
+                    if(upSel) upSel.appendChild(opt2);
+                    
+                    // Select it in update team tab
+                    if(upSel) { 
+                        upSel.value = newSprint.id; 
+                    }
+                    
+                    document.getElementById('createSprintModal').classList.add('hidden');
+                    document.getElementById('newSprintName').value = '';
+                    document.getElementById('newSprintStart').value = '';
+                    document.getElementById('newSprintEnd').value = '';
+                    
+                    renderUpdateForm();
+                } else {
+                    const data = await res.json();
+                    document.getElementById('createSprintError').textContent = data.detail || "Failed to create sprint.";
+                    document.getElementById('createSprintError').classList.remove('hidden');
+                }
+            } catch(e) {
+                document.getElementById('createSprintError').textContent = "Connection error.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+            }
+            
+            btn.innerHTML = 'Create';
+            btn.disabled = false;
+        });
+
+        // End Sprint JS
+
+</script>
     <script>
         tailwind.config = {
             theme: {
@@ -64,12 +139,237 @@
                 }
             }
         }
-    </script>
+            document.getElementById('addSprintBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.remove('hidden');
+            document.getElementById('createSprintError').classList.add('hidden');
+        });
+
+        document.getElementById('closeSprintModalBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.add('hidden');
+        });
+
+        document.getElementById('submitSprintBtn').addEventListener('click', async () => {
+            const name = document.getElementById('newSprintName').value.trim();
+            const start = document.getElementById('newSprintStart').value;
+            const end = document.getElementById('newSprintEnd').value;
+            
+            if(!name) {
+                document.getElementById('createSprintError').textContent = "Sprint Name is required.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const btn = document.getElementById('submitSprintBtn');
+            btn.innerHTML = 'Creating...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('http://localhost:8000/sprints', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ name: name, start_date: start, end_date: end })
+                });
+
+                if(res.ok) {
+                    const newSprint = await res.json();
+                    globalData.sprints.push(newSprint);
+                    
+                    // Add to dropdowns
+                    const mainSel = document.getElementById('mainSprintSelect');
+                    const upSel = document.getElementById('updateSprintSelect');
+                    
+                    let opt1 = document.createElement('option');
+                    opt1.value = newSprint.id; opt1.textContent = newSprint.name;
+                    if(mainSel) mainSel.appendChild(opt1);
+                    
+                    let opt2 = document.createElement('option');
+                    opt2.value = newSprint.id; opt2.textContent = newSprint.name;
+                    if(upSel) upSel.appendChild(opt2);
+                    
+                    // Select it in update team tab
+                    if(upSel) { 
+                        upSel.value = newSprint.id; 
+                    }
+                    
+                    document.getElementById('createSprintModal').classList.add('hidden');
+                    document.getElementById('newSprintName').value = '';
+                    document.getElementById('newSprintStart').value = '';
+                    document.getElementById('newSprintEnd').value = '';
+                    
+                    renderUpdateForm();
+                } else {
+                    const data = await res.json();
+                    document.getElementById('createSprintError').textContent = data.detail || "Failed to create sprint.";
+                    document.getElementById('createSprintError').classList.remove('hidden');
+                }
+            } catch(e) {
+                document.getElementById('createSprintError').textContent = "Connection error.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+            }
+            
+            btn.innerHTML = 'Create';
+            btn.disabled = false;
+        });
+
+        // End Sprint JS
+
+</script>
 
     <!-- SheetJS -->
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js">        document.getElementById('addSprintBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.remove('hidden');
+            document.getElementById('createSprintError').classList.add('hidden');
+        });
+
+        document.getElementById('closeSprintModalBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.add('hidden');
+        });
+
+        document.getElementById('submitSprintBtn').addEventListener('click', async () => {
+            const name = document.getElementById('newSprintName').value.trim();
+            const start = document.getElementById('newSprintStart').value;
+            const end = document.getElementById('newSprintEnd').value;
+            
+            if(!name) {
+                document.getElementById('createSprintError').textContent = "Sprint Name is required.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const btn = document.getElementById('submitSprintBtn');
+            btn.innerHTML = 'Creating...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('http://localhost:8000/sprints', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ name: name, start_date: start, end_date: end })
+                });
+
+                if(res.ok) {
+                    const newSprint = await res.json();
+                    globalData.sprints.push(newSprint);
+                    
+                    // Add to dropdowns
+                    const mainSel = document.getElementById('mainSprintSelect');
+                    const upSel = document.getElementById('updateSprintSelect');
+                    
+                    let opt1 = document.createElement('option');
+                    opt1.value = newSprint.id; opt1.textContent = newSprint.name;
+                    if(mainSel) mainSel.appendChild(opt1);
+                    
+                    let opt2 = document.createElement('option');
+                    opt2.value = newSprint.id; opt2.textContent = newSprint.name;
+                    if(upSel) upSel.appendChild(opt2);
+                    
+                    // Select it in update team tab
+                    if(upSel) { 
+                        upSel.value = newSprint.id; 
+                    }
+                    
+                    document.getElementById('createSprintModal').classList.add('hidden');
+                    document.getElementById('newSprintName').value = '';
+                    document.getElementById('newSprintStart').value = '';
+                    document.getElementById('newSprintEnd').value = '';
+                    
+                    renderUpdateForm();
+                } else {
+                    const data = await res.json();
+                    document.getElementById('createSprintError').textContent = data.detail || "Failed to create sprint.";
+                    document.getElementById('createSprintError').classList.remove('hidden');
+                }
+            } catch(e) {
+                document.getElementById('createSprintError').textContent = "Connection error.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+            }
+            
+            btn.innerHTML = 'Create';
+            btn.disabled = false;
+        });
+
+        // End Sprint JS
+
+</script>
     <!-- html2canvas -->
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js">        document.getElementById('addSprintBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.remove('hidden');
+            document.getElementById('createSprintError').classList.add('hidden');
+        });
+
+        document.getElementById('closeSprintModalBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.add('hidden');
+        });
+
+        document.getElementById('submitSprintBtn').addEventListener('click', async () => {
+            const name = document.getElementById('newSprintName').value.trim();
+            const start = document.getElementById('newSprintStart').value;
+            const end = document.getElementById('newSprintEnd').value;
+            
+            if(!name) {
+                document.getElementById('createSprintError').textContent = "Sprint Name is required.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const btn = document.getElementById('submitSprintBtn');
+            btn.innerHTML = 'Creating...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('http://localhost:8000/sprints', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ name: name, start_date: start, end_date: end })
+                });
+
+                if(res.ok) {
+                    const newSprint = await res.json();
+                    globalData.sprints.push(newSprint);
+                    
+                    // Add to dropdowns
+                    const mainSel = document.getElementById('mainSprintSelect');
+                    const upSel = document.getElementById('updateSprintSelect');
+                    
+                    let opt1 = document.createElement('option');
+                    opt1.value = newSprint.id; opt1.textContent = newSprint.name;
+                    if(mainSel) mainSel.appendChild(opt1);
+                    
+                    let opt2 = document.createElement('option');
+                    opt2.value = newSprint.id; opt2.textContent = newSprint.name;
+                    if(upSel) upSel.appendChild(opt2);
+                    
+                    // Select it in update team tab
+                    if(upSel) { 
+                        upSel.value = newSprint.id; 
+                    }
+                    
+                    document.getElementById('createSprintModal').classList.add('hidden');
+                    document.getElementById('newSprintName').value = '';
+                    document.getElementById('newSprintStart').value = '';
+                    document.getElementById('newSprintEnd').value = '';
+                    
+                    renderUpdateForm();
+                } else {
+                    const data = await res.json();
+                    document.getElementById('createSprintError').textContent = data.detail || "Failed to create sprint.";
+                    document.getElementById('createSprintError').classList.remove('hidden');
+                }
+            } catch(e) {
+                document.getElementById('createSprintError').textContent = "Connection error.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+            }
+            
+            btn.innerHTML = 'Create';
+            btn.disabled = false;
+        });
+
+        // End Sprint JS
+
+</script>
 
     <style>
         /* Custom scrollbar for a cleaner look */
@@ -431,7 +731,15 @@
         <!-- Update Data View -->
         <div id="updateWrapper" class="hidden flex-col gap-6">
             <div class="bg-white rounded-tremor-default border border-tremor-border shadow-tremor-card p-4">
-                <h2 class="text-tremor-title font-medium text-tremor-content-strong mb-4">Update Team Data</h2>
+                <div class="flex items-center mb-4">
+                    <h2 class="text-tremor-title font-medium text-tremor-content-strong">Update Team Data</h2>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button id="addSprintBtn" class="bg-blue-100 text-blue-700 px-2 py-1.5 rounded-md hover:bg-blue-200 border border-blue-300 shadow-sm flex items-center" title="Create New Sprint">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                        <select id="updateSprintSelect" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 cursor-pointer"></select>
+                    </div>
+                </div>
 
                 <div class="mb-4">
                     <label class="text-sm text-tremor-content">Select Team</label>
@@ -483,9 +791,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-6">
                     <div>
                         <div class="flex items-center gap-2 mb-1">
-                            <span id="bannerSprint"
-                                class="inline-flex items-center px-2.5 py-0.5 rounded-tremor-full text-xs font-medium bg-blue-100 text-blue-800">Sprint
-                                5</span>
+                            <select id="mainSprintSelect" class="bg-blue-100 text-blue-800 text-xs font-medium rounded px-2 py-1 outline-none border-none cursor-pointer hover:bg-blue-200"></select>
                             <span id="bannerWeek" class="text-sm text-tremor-content font-medium">Wk 27 / 2026</span>
                         </div>
                         <div class="text-xs text-tremor-content-subtle">
@@ -631,6 +937,7 @@
             sprintInfo: {
                 week: "", dates: "", name: "", sprintNum: ""
             },
+            sprints: [],
             metrics: [], // array of objects { engagement, spoc, ...cols }
             details: [],
             ragConfig: {}
@@ -667,6 +974,15 @@
                     dropdownContainer.classList.add('hidden');
                 } else {
                     dropdownContainer.classList.remove('hidden');
+                }
+            }
+            
+            if (tabId !== 'main' && currentEngagement === 'all') {
+                const sel = document.getElementById('engagementSelect');
+                if (sel && sel.options.length > 1) {
+                    currentEngagement = sel.options[1].value;
+                    sel.value = currentEngagement;
+                    renderAll();
                 }
             }
 
@@ -717,18 +1033,25 @@
         });
 
         function updateDropdown() {
-            engagementSelect.innerHTML = "";
+            engagementSelect.innerHTML = "<option value='all'>All Projects</option>";
             if (globalData.metrics.length === 0) return;
 
-            globalData.metrics.forEach(m => {
+            const sprintSel = document.getElementById('mainSprintSelect');
+            const sprintId = sprintSel ? sprintSel.value : null;
+            let filtered = globalData.metrics;
+            if(sprintId) filtered = filtered.filter(m => m.sprint_id == sprintId);
+
+            const uniqueEngagements = [...new Set(filtered.map(m => m.engagement))];
+
+            uniqueEngagements.forEach(eng => {
                 let opt = document.createElement('option');
-                opt.value = m.engagement;
-                opt.textContent = m.engagement;
+                opt.value = eng;
+                opt.textContent = eng;
                 engagementSelect.appendChild(opt);
             });
 
-            if (!currentEngagement || !globalData.metrics.find(m => m.engagement === currentEngagement)) {
-                currentEngagement = globalData.metrics[0].engagement;
+            if (!currentEngagement || (currentEngagement !== 'all' && !uniqueEngagements.includes(currentEngagement))) {
+                currentEngagement = 'all';
             }
             engagementSelect.value = currentEngagement;
         }
@@ -886,17 +1209,48 @@
 
         // --- Render Functions ---
         function renderAll() {
-            const curM = globalData.metrics.find(m => m.engagement === currentEngagement);
+            // Populate mainSprintSelect FIRST so summary cards can use the selected sprint
+            const sel = document.getElementById('mainSprintSelect');
+            if (sel && sel.options.length === 0 && globalData.sprints && globalData.sprints.length > 0) {
+                globalData.sprints.forEach(s => {
+                    let opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.name;
+                    sel.appendChild(opt);
+                });
+                sel.value = globalData.sprints[globalData.sprints.length - 1].id; // latest
+                
+                const sprintObj = globalData.sprints.find(s => s.id == sel.value);
+                if(sprintObj) {
+                    const elDates = document.getElementById('bannerDates');
+                    if (elDates) elDates.textContent = `${sprintObj.start_date} to ${sprintObj.end_date}`;
+                }
+            }
+
+            // Always render summary cards for the main dashboard (All projects view)
+            renderSummaryCards();
+            
+            // Sync controls visibility
+            switchTab(currentTab);
+
+            // If we are looking at 'all', we don't render individual team tabs
+            if (currentEngagement === 'all') return;
+
+            const sprintSel = document.getElementById('mainSprintSelect');
+            const sprintId = sprintSel ? sprintSel.value : null;
+            const curM = globalData.metrics.find(m => m.engagement === currentEngagement && m.sprint_id == sprintId);
             if (!curM) return;
 
-            const curD = globalData.details.find(d => d.engagement === currentEngagement) || {};
+            const curD = globalData.details.find(d => d.engagement === currentEngagement && d.sprint_id == sprintId) || {};
 
             // Banner & Header
             const sprintText = globalData.sprintInfo.sprintNum ? `Sprint ${globalData.sprintInfo.sprintNum}` : "Sprint 5";
             const weekText = globalData.sprintInfo.week || "Wk 27 / 2026";
             const datesText = globalData.sprintInfo.dates || "01-Jul-2026 to 15-Jul-2026";
 
-            document.getElementById('bannerSprint').textContent = sprintText;
+            // document.getElementById('bannerSprint').textContent = sprintText;
+
+
             document.getElementById('bannerWeek').textContent = weekText;
             document.getElementById('bannerDates').textContent = datesText;
 
@@ -919,16 +1273,13 @@
             renderCompliance();
             renderValueMetrics();
 
-            // Render Summary last so it can compute overall RAGs
-            renderSummaryCards();
-
-            // Sync controls visibility
-            switchTab(currentTab);
         }
 
         function renderDelivery() {
-            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
-            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+            const sprintSel = document.getElementById('mainSprintSelect');
+            const sprintId = sprintSel ? sprintSel.value : null;
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
+            const d = globalData.details.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
 
             document.getElementById('deliveryMetricsGrid').innerHTML = `
                 ${createCard("Story Points Assigned", m.spAssigned, 'spAssigned')}
@@ -944,8 +1295,10 @@
         }
 
         function renderHealth() {
-            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
-            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+            const sprintSel = document.getElementById('mainSprintSelect');
+            const sprintId = sprintSel ? sprintSel.value : null;
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
+            const d = globalData.details.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
 
             document.getElementById('healthMetricsGrid').innerHTML = `
                 ${createCard("Defect Leakage", m.defectLeakage, 'defectLeakage', "%")}
@@ -965,8 +1318,10 @@
         }
 
         function renderCapability() {
-            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
-            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+            const sprintSel = document.getElementById('mainSprintSelect');
+            const sprintId = sprintSel ? sprintSel.value : null;
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
+            const d = globalData.details.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
 
             document.getElementById('capabilityMetricsGrid').innerHTML = `
                 ${createCard("Automation Tools Competency", m.autoToolsReq, 'autoToolsReq')}
@@ -987,8 +1342,10 @@
         }
 
         function renderAutomation() {
-            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
-            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+            const sprintSel = document.getElementById('mainSprintSelect');
+            const sprintId = sprintSel ? sprintSel.value : null;
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
+            const d = globalData.details.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
 
             document.getElementById('automationMetricsGrid').innerHTML = `
                 ${createCard("Automation Coverage", m.autoCoverage, 'autoCoverage', "%")}
@@ -1011,7 +1368,9 @@
         }
 
         function renderCompliance() {
-            const d = globalData.details.find(x => x.engagement === currentEngagement) || {};
+            const sprintSel = document.getElementById('mainSprintSelect');
+            const sprintId = sprintSel ? sprintSel.value : null;
+            const d = globalData.details.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
             const compRag = d.processComp === 100 ? RAG.GREEN : RAG.RED;
 
             document.getElementById('complianceDetailsGrid').innerHTML = `
@@ -1026,7 +1385,9 @@
         }
 
         function renderValueMetrics() {
-            const m = globalData.metrics.find(x => x.engagement === currentEngagement);
+            const sprintSel = document.getElementById('mainSprintSelect');
+            const sprintId = sprintSel ? sprintSel.value : null;
+            const m = globalData.metrics.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
             const rate = parseFloat(hourlyRateInput.value) || 0;
 
             let effortSavings = null;
@@ -1103,9 +1464,14 @@
 
         function renderSummaryCards() {
             let tableRows = '';
+            
+            const sprintSel = document.getElementById('mainSprintSelect');
+            const sprintId = sprintSel ? sprintSel.value : null;
+            let sprintMetrics = globalData.metrics;
+            if (sprintId) sprintMetrics = sprintMetrics.filter(m => m.sprint_id == sprintId);
 
-            globalData.metrics.forEach(m => {
-                const d = globalData.details.find(x => x.engagement === m.engagement) || {};
+            sprintMetrics.forEach(m => {
+                const d = globalData.details.find(x => x.engagement === m.engagement && x.sprint_id == sprintId) || {};
                 const eng = m.engagement;
 
                 const deliveryRags = [
@@ -1348,7 +1714,82 @@
 
             document.body.removeChild(tempDiv);
         }
-    </script>
+            document.getElementById('addSprintBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.remove('hidden');
+            document.getElementById('createSprintError').classList.add('hidden');
+        });
+
+        document.getElementById('closeSprintModalBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.add('hidden');
+        });
+
+        document.getElementById('submitSprintBtn').addEventListener('click', async () => {
+            const name = document.getElementById('newSprintName').value.trim();
+            const start = document.getElementById('newSprintStart').value;
+            const end = document.getElementById('newSprintEnd').value;
+            
+            if(!name) {
+                document.getElementById('createSprintError').textContent = "Sprint Name is required.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const btn = document.getElementById('submitSprintBtn');
+            btn.innerHTML = 'Creating...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('http://localhost:8000/sprints', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ name: name, start_date: start, end_date: end })
+                });
+
+                if(res.ok) {
+                    const newSprint = await res.json();
+                    globalData.sprints.push(newSprint);
+                    
+                    // Add to dropdowns
+                    const mainSel = document.getElementById('mainSprintSelect');
+                    const upSel = document.getElementById('updateSprintSelect');
+                    
+                    let opt1 = document.createElement('option');
+                    opt1.value = newSprint.id; opt1.textContent = newSprint.name;
+                    if(mainSel) mainSel.appendChild(opt1);
+                    
+                    let opt2 = document.createElement('option');
+                    opt2.value = newSprint.id; opt2.textContent = newSprint.name;
+                    if(upSel) upSel.appendChild(opt2);
+                    
+                    // Select it in update team tab
+                    if(upSel) { 
+                        upSel.value = newSprint.id; 
+                    }
+                    
+                    document.getElementById('createSprintModal').classList.add('hidden');
+                    document.getElementById('newSprintName').value = '';
+                    document.getElementById('newSprintStart').value = '';
+                    document.getElementById('newSprintEnd').value = '';
+                    
+                    renderUpdateForm();
+                } else {
+                    const data = await res.json();
+                    document.getElementById('createSprintError').textContent = data.detail || "Failed to create sprint.";
+                    document.getElementById('createSprintError').classList.remove('hidden');
+                }
+            } catch(e) {
+                document.getElementById('createSprintError').textContent = "Connection error.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+            }
+            
+            btn.innerHTML = 'Create';
+            btn.disabled = false;
+        });
+
+        // End Sprint JS
+
+</script>
     <!-- Login Modal -->
     <div id="loginModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
@@ -1422,6 +1863,7 @@
                             class="font-normal"></span></p>
                     <p class="text-sm font-medium">Points Completed: <span id="revSpCompleted"
                             class="font-normal"></span></p>
+                    <div id="adoStoryNames" class="mt-4 max-h-40 overflow-y-auto text-sm border-t pt-2 text-left"></div>
                 </div>
                 <p id="adoReviewError" class="text-red-500 text-xs mt-2 hidden"></p>
                 <div class="items-center px-4 py-3 mt-4">
@@ -1623,6 +2065,7 @@
             'ado_project': 'Project Name',
             'ado_team': 'Team Name (Area)',
             'ado_pat': 'Personal Access Token',
+            'ado_iteration': 'ADO Iteration Name',
             'sprint': 'Sprint Name/Number'
         };
 
@@ -1696,11 +2139,11 @@
             teamsList = await resT.json();
             const sel = document.getElementById('updateTeamSelect');
             sel.innerHTML = '';
-            globalData.metrics.forEach(m => {
-                if (userRole === 'team_spoc' && m.team_id !== userTeamId) return;
+            teamsList.forEach(t => {
+                if (userRole === 'team_spoc' && t.id !== userTeamId) return;
                 let opt = document.createElement('option');
-                opt.value = m.team_id;
-                opt.textContent = m.engagement;
+                opt.value = t.id;
+                opt.textContent = t.engagement;
                 sel.appendChild(opt);
             });
             renderUpdateForm();
@@ -1717,6 +2160,21 @@
         });
 
         document.getElementById('updateTeamSelect').addEventListener('change', renderUpdateForm);
+
+        document.getElementById('mainSprintSelect').addEventListener('change', () => {
+            const sprintId = document.getElementById('mainSprintSelect').value;
+            const sprint = globalData.sprints.find(s => s.id == sprintId);
+            if(sprint) {
+                const datesEl = document.getElementById('bannerDates');
+                if(datesEl) datesEl.textContent = `${sprint.start_date} to ${sprint.end_date}`;
+            }
+            renderAll();
+        });
+
+        document.getElementById('updateSprintSelect').addEventListener('change', () => {
+            renderUpdateForm();
+        });
+
 
         ['tabMetrics', 'tabDetails', 'tabConfigs', 'tabAdo'].forEach(tab => {
             document.getElementById(tab).addEventListener('click', (e) => {
@@ -1742,11 +2200,24 @@
             const teamId = document.getElementById('updateTeamSelect').value;
             if (!teamId) return;
 
-            const metric = globalData.metrics.find(m => m.team_id == teamId) || {};
-            const detail = globalData.details.find(d => d.team_id == teamId) || {};
+            const sprintSel = document.getElementById('updateSprintSelect');
+            if (sprintSel.options.length === 0 && globalData.sprints && globalData.sprints.length > 0) {
+                globalData.sprints.forEach(s => {
+                    let opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.name;
+                    sprintSel.appendChild(opt);
+                });
+                sprintSel.value = globalData.sprints[globalData.sprints.length - 1].id;
+            }
+            const sprintId = sprintSel.value;
+
+            const metric = globalData.metrics.find(m => m.team_id == teamId && m.sprint_id == sprintId) || {};
+            const detail = globalData.details.find(d => d.team_id == teamId && d.sprint_id == sprintId) || {};
+
 
             const METRIC_SECTIONS = {
-                'Delivery': ['sprint', 'spAssigned', 'spCompleted', 'usPushed', 'usAssigned', 'usCompleted'],
+                'Delivery': ['spAssigned', 'spCompleted', 'usPushed', 'usAssigned', 'usCompleted'],
                 'Program Health': ['defectLeakage', 'prodIncidents', 'openRisks', 'escalations', 'sowMilestones'],
                 'Capability & Gaps': ['autoToolsReq', 'buildToolsReq'],
                 'Automation': ['autoCoverage', 'autoStability', 'regRunTime', 'regExecTimeNoAuto', 'autoBugs', 'assets']
@@ -1754,7 +2225,7 @@
 
             const DETAIL_SECTIONS = {
                 'General Information': ['catManager', 'engagementCode', 'lobLead'],
-                'Delivery Details': ['sprint', 'usAssignedPts'],
+                'Delivery Details': ['usAssignedPts'],
                 'Program Health Details': ['defectPts', 'incidentPts', 'riskPts', 'escalationPts', 'sowPts'],
                 'Capability Details': ['autoToolPts', 'buildToolPts', 'cloudProf', 'cicdSetup'],
                 'Automation Details': ['autoBugsPts', 'assetPts', 'ktPrep', 'cicdMat'],
@@ -1762,7 +2233,7 @@
             };
 
             const ADO_SECTIONS = {
-                'Azure DevOps Configuration': ['ado_org', 'ado_project', 'ado_team', 'ado_pat']
+                'Azure DevOps Configuration': ['ado_org', 'ado_project', 'ado_team', 'ado_pat', 'ado_iteration']
             };
 
             const CONFIG_SECTIONS = {
@@ -1788,6 +2259,7 @@
                     ado_org: teamData.ado_org || '',
                     ado_project: teamData.ado_project || '',
                     ado_team: teamData.ado_team || '',
+                    ado_iteration: teamData.ado_iteration || '',
                     ado_pat: teamData.ado_org ? '********' : '' // placeholder if exists
                 };
             } else if (currentUpdateTab === 'configs') {
@@ -1913,6 +2385,12 @@
                     payload['engagement'] = metric.engagement;
                     payload['spoc'] = metric.spoc;
                 }
+                const sprintSel = document.getElementById('updateSprintSelect');
+                if (sprintSel && sprintSel.value) {
+                    payload['sprint_id'] = parseInt(sprintSel.value);
+                    const spObj = globalData.sprints.find(s => s.id == sprintSel.value);
+                    if(spObj) payload['sprint'] = spObj.name;
+                }
             }
 
             const token = localStorage.getItem('token');
@@ -1929,21 +2407,24 @@
                 if (res.ok) {
                     msgEl.textContent = 'Saved successfully!';
                     msgEl.className = 'text-sm mt-2 text-green-600 font-medium';
-                    const [mRes, dRes, cRes] = await Promise.all([
+                    const [mRes, dRes, cRes, sRes] = await Promise.all([
                         fetch('http://localhost:8000/metrics', { headers: { 'Authorization': 'Bearer ' + token } }),
                         fetch('http://localhost:8000/details', { headers: { 'Authorization': 'Bearer ' + token } }),
-                        fetch('http://localhost:8000/configs', { headers: { 'Authorization': 'Bearer ' + token } })
+                        fetch('http://localhost:8000/configs', { headers: { 'Authorization': 'Bearer ' + token } }),
+                        fetch('http://localhost:8000/sprints', { headers: { 'Authorization': 'Bearer ' + token } })
                     ]);
                     globalData.metrics = await mRes.json();
                     globalData.details = await dRes.json();
                     globalData.ragConfig = await cRes.json();
+                    globalData.sprints = await sRes.json();
 
                     calculateProcessCompliance();
 
                     sessionStorage.setItem('dashboardData', JSON.stringify({
                         metrics: globalData.metrics,
                         details: globalData.details,
-                        ragConfig: globalData.ragConfig
+                        ragConfig: globalData.ragConfig,
+                        sprints: globalData.sprints
                     }));
                     sessionStorage.setItem('dashboardTimestamp', Date.now().toString());
 
@@ -1990,6 +2471,7 @@
                     globalData.metrics = parsed.metrics;
                     globalData.details = parsed.details;
                     globalData.ragConfig = parsed.ragConfig;
+                    globalData.sprints = parsed.sprints || [];
 
                     calculateProcessCompliance();
 
@@ -2000,8 +2482,8 @@
                     document.getElementById('dashboardWrapper').classList.remove('hidden');
                     document.getElementById('dashboardWrapper').classList.add('flex');
 
-                    updateDropdown();
                     renderAll();
+                    updateDropdown();
 
                     document.getElementById('lastUpdated').textContent = 'Refreshed (Cache): ' + new Date().toLocaleTimeString();
                     return;
@@ -2009,27 +2491,31 @@
             }
 
             try {
-                const [metricsRes, detailsRes, configsRes] = await Promise.all([
+                const [metricsRes, detailsRes, configsRes, sprintsRes] = await Promise.all([
                     fetch('http://localhost:8000/metrics', { headers: { 'Authorization': 'Bearer ' + token } }),
                     fetch('http://localhost:8000/details', { headers: { 'Authorization': 'Bearer ' + token } }),
-                    fetch('http://localhost:8000/configs', { headers: { 'Authorization': 'Bearer ' + token } })
+                    fetch('http://localhost:8000/configs', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch('http://localhost:8000/sprints', { headers: { 'Authorization': 'Bearer ' + token } })
                 ]);
 
-                if (metricsRes.ok && detailsRes.ok && configsRes.ok) {
+                if (metricsRes.ok && detailsRes.ok && configsRes.ok && sprintsRes.ok) {
                     const metrics = await metricsRes.json();
                     const details = await detailsRes.json();
                     const configs = await configsRes.json();
+                    const sprints = await sprintsRes.json();
 
                     globalData.metrics = metrics;
                     globalData.details = details;
                     globalData.ragConfig = configs;
+                    globalData.sprints = sprints;
 
                     calculateProcessCompliance();
 
                     sessionStorage.setItem('dashboardData', JSON.stringify({
                         metrics: metrics,
                         details: details,
-                        ragConfig: configs
+                        ragConfig: configs,
+                        sprints: sprints
                     }));
                     sessionStorage.setItem('dashboardTimestamp', Date.now().toString());
 
@@ -2040,8 +2526,8 @@
                     document.getElementById('dashboardWrapper').classList.remove('hidden');
                     document.getElementById('dashboardWrapper').classList.add('flex');
 
-                    updateDropdown();
                     renderAll();
+                    updateDropdown();
 
                     document.getElementById('lastUpdated').textContent = 'Refreshed (API): ' + new Date().toLocaleTimeString();
                 } else if (metricsRes.status === 401 || detailsRes.status === 401) {
@@ -2085,6 +2571,16 @@
                     document.getElementById('revUsCompleted').textContent = pendingAdoData.usCompleted;
                     document.getElementById('revSpAssigned').textContent = pendingAdoData.spAssigned;
                     document.getElementById('revSpCompleted').textContent = pendingAdoData.spCompleted;
+                    let storiesHtml = '<p class="font-semibold mb-1">User Stories Found:</p><ul>';
+                    if(pendingAdoData.user_stories && pendingAdoData.user_stories.length > 0) {
+                        pendingAdoData.user_stories.forEach(s => {
+                            storiesHtml += `<li>- ${s.title} (${s.story_points || 0} pts)</li>`;
+                        });
+                    } else {
+                        storiesHtml += '<li>No stories found.</li>';
+                    }
+                    storiesHtml += '</ul>';
+                    document.getElementById('adoStoryNames').innerHTML = storiesHtml;
 
                     document.getElementById('adoReviewModal').classList.remove('hidden');
                     document.getElementById('adoReviewError').classList.add('hidden');
@@ -2115,11 +2611,13 @@
             btn.disabled = true;
 
             try {
-                // First, fetch current metrics to merge
-                const metric = globalData.metrics.find(m => m.team_id == teamId) || {};
-                const detail = globalData.details.find(d => d.team_id == teamId) || {};
-                
-                const sprintName = pendingAdoData.iteration_name;
+                // First, fetch current metrics to merge for the selected sprint
+                const sprintId = document.getElementById('updateSprintSelect').value;
+                const sprintObj = globalData.sprints.find(s => s.id == sprintId);
+                const sprintName = sprintObj ? sprintObj.name : pendingAdoData.iteration_name;
+
+                const metric = globalData.metrics.find(m => m.team_id == teamId && m.sprint_id == sprintId) || {};
+                const detail = globalData.details.find(d => d.team_id == teamId && d.sprint_id == sprintId) || {};
                 
                 // Parse user story names separated by pipe
                 let usNames = "";
@@ -2130,6 +2628,7 @@
                 // Construct payloads
                 const metricPayload = {
                     ...metric,
+                    sprint_id: sprintId ? parseInt(sprintId) : null,
                     sprint: sprintName,
                     spAssigned: pendingAdoData.spAssigned,
                     spCompleted: pendingAdoData.spCompleted,
@@ -2139,6 +2638,7 @@
 
                 const detailPayload = {
                     ...detail,
+                    sprint_id: sprintId ? parseInt(sprintId) : null,
                     sprint: sprintName,
                     usAssignedPts: usNames || detail.usAssignedPts
                 };
@@ -2202,7 +2702,108 @@
                 fetchDataFromAPI();
             }
         });
-    </script>
+            document.getElementById('addSprintBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.remove('hidden');
+            document.getElementById('createSprintError').classList.add('hidden');
+        });
+
+        document.getElementById('closeSprintModalBtn').addEventListener('click', () => {
+            document.getElementById('createSprintModal').classList.add('hidden');
+        });
+
+        document.getElementById('submitSprintBtn').addEventListener('click', async () => {
+            const name = document.getElementById('newSprintName').value.trim();
+            const start = document.getElementById('newSprintStart').value;
+            const end = document.getElementById('newSprintEnd').value;
+            
+            if(!name) {
+                document.getElementById('createSprintError').textContent = "Sprint Name is required.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            const btn = document.getElementById('submitSprintBtn');
+            btn.innerHTML = 'Creating...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('http://localhost:8000/sprints', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ name: name, start_date: start, end_date: end })
+                });
+
+                if(res.ok) {
+                    const newSprint = await res.json();
+                    globalData.sprints.push(newSprint);
+                    
+                    // Add to dropdowns
+                    const mainSel = document.getElementById('mainSprintSelect');
+                    const upSel = document.getElementById('updateSprintSelect');
+                    
+                    let opt1 = document.createElement('option');
+                    opt1.value = newSprint.id; opt1.textContent = newSprint.name;
+                    if(mainSel) mainSel.appendChild(opt1);
+                    
+                    let opt2 = document.createElement('option');
+                    opt2.value = newSprint.id; opt2.textContent = newSprint.name;
+                    if(upSel) upSel.appendChild(opt2);
+                    
+                    // Select it in update team tab
+                    if(upSel) { 
+                        upSel.value = newSprint.id; 
+                    }
+                    
+                    document.getElementById('createSprintModal').classList.add('hidden');
+                    document.getElementById('newSprintName').value = '';
+                    document.getElementById('newSprintStart').value = '';
+                    document.getElementById('newSprintEnd').value = '';
+                    
+                    renderUpdateForm();
+                } else {
+                    const data = await res.json();
+                    document.getElementById('createSprintError').textContent = data.detail || "Failed to create sprint.";
+                    document.getElementById('createSprintError').classList.remove('hidden');
+                }
+            } catch(e) {
+                document.getElementById('createSprintError').textContent = "Connection error.";
+                document.getElementById('createSprintError').classList.remove('hidden');
+            }
+            
+            btn.innerHTML = 'Create';
+            btn.disabled = false;
+        });
+
+        // End Sprint JS
+
+</script>
+    <!-- Create Sprint Modal -->
+    <div id="createSprintModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex justify-center items-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-96 p-6">
+            <h3 class="text-lg font-bold mb-4">Create New Sprint</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Sprint Name / Number</label>
+                    <input type="text" id="newSprintName" placeholder="e.g. Sprint 7" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Start Date (From)</label>
+                    <input type="date" id="newSprintStart" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">End Date (To)</label>
+                    <input type="date" id="newSprintEnd" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+            </div>
+            <p id="createSprintError" class="text-red-500 text-xs mt-2 hidden"></p>
+            <div class="flex justify-end gap-2 mt-6">
+                <button id="closeSprintModalBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
+                <button id="submitSprintBtn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Create</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

@@ -17,6 +17,19 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class SprintBase(BaseModel):
+    name: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+class SprintCreate(SprintBase):
+    pass
+
+class SprintResponse(SprintBase):
+    id: int
+    class Config:
+        from_attributes = True
+
 class TeamBase(BaseModel):
     engagement: str
     spoc: str
@@ -26,6 +39,7 @@ class TeamResponse(TeamBase):
     ado_org: Optional[str] = None
     ado_project: Optional[str] = None
     ado_team: Optional[str] = None
+    ado_iteration: Optional[str] = None
     # We do NOT return the PAT in the response for security reasons
 
     class Config:
@@ -36,6 +50,7 @@ class ADOConfigUpdate(BaseModel):
     ado_project: Optional[str] = None
     ado_team: Optional[str] = None
     ado_pat: Optional[str] = None
+    ado_iteration: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -73,8 +88,9 @@ class TeamConfigResponse(TeamConfigBase):
         from_attributes = True
 
 class MetricBase(BaseModel):
-    engagement: str
-    spoc: str
+    engagement: Optional[str] = None
+    spoc: Optional[str] = None
+    sprint_id: Optional[int] = None
     sprint: Optional[str] = None
     spAssigned: Optional[float] = None
     spCompleted: Optional[float] = None
@@ -103,8 +119,9 @@ class MetricResponse(MetricBase):
         from_attributes = True
 
 class DetailBase(BaseModel):
-    engagement: str
-    spoc: str
+    engagement: Optional[str] = None
+    spoc: Optional[str] = None
+    sprint_id: Optional[int] = None
     sprint: Optional[str] = None
     usAssignedPts: Optional[str] = None
     defectPts: Optional[str] = None
