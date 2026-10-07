@@ -41,20 +41,25 @@ class ADOClient:
         if not work_item_relations:
             return []
 
-        # Get details for these work items (including Title)
+        # Get details for these work items (including Title) in chunks of 200
         ids = [str(item["id"]) for item in work_item_relations]
-        ids_str = ",".join(ids)
         fields = "System.Id,System.Title,System.State,System.WorkItemType,Microsoft.VSTS.Scheduling.StoryPoints"
-        details_url = (
-            f"https://dev.azure.com/{self.org}/{self.project}/_apis/wit/workitems"
-            f"?ids={ids_str}&fields={fields}&api-version=6.0"
-        )
         
-        details_res = requests.get(details_url, auth=HTTPBasicAuth("", self.pat))
-        if details_res.status_code != 200:
-            raise Exception(f"Failed to fetch work item details: {details_res.text}")
+        all_details = []
+        chunk_size = 200
+        for i in range(0, len(ids), chunk_size):
+            chunk_ids = ids[i:i+chunk_size]
+            ids_str = ",".join(chunk_ids)
+            details_url = (
+                f"https://dev.azure.com/{self.org}/{self.project}/_apis/wit/workitems"
+                f"?ids={ids_str}&fields={fields}&api-version=6.0"
+            )
+            details_res = requests.get(details_url, auth=HTTPBasicAuth("", self.pat))
+            if details_res.status_code != 200:
+                raise Exception(f"Failed to fetch work item details: {details_res.text}")
+            all_details.extend(details_res.json().get("value", []))
             
-        return details_res.json().get("value", [])
+        return all_details
 
     def get_iteration_by_name(self, iteration_name: str):
         url = f"{self.base_url}/{self.team}/_apis/work/teamsettings/iterations?api-version=6.0"
