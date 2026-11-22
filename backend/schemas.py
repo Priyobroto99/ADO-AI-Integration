@@ -150,6 +150,50 @@ class DetailResponse(DetailBase):
     class Config:
         from_attributes = True
 
+class TeamProfileBase(BaseModel):
+    catManager: Optional[str] = None
+    engagementCode: Optional[str] = None
+    lobLead: Optional[str] = None
+    
+    cloudProf: Optional[str] = None
+    cicdSetup: Optional[str] = None
+    cicdMat: Optional[str] = None
+    autoToolsReq: Optional[str] = None
+    buildToolsReq: Optional[str] = None
+    autoToolPts: Optional[str] = None
+    buildToolPts: Optional[str] = None
+    
+    autoCoverage: Optional[float] = None
+    autoStability: Optional[float] = None
+    regRunTime: Optional[float] = None
+    regExecTimeNoAuto: Optional[float] = None
+    kt: Optional[float] = None
+    ktPrep: Optional[str] = None
+    assets: Optional[float] = None
+    assetPts: Optional[str] = None
+    autoBugs: Optional[float] = None
+    autoBugsPts: Optional[str] = None
+    
+    defectLeakage: Optional[float] = None
+    prodIncidents: Optional[float] = None
+    openRisks: Optional[float] = None
+    sowMilestones: Optional[str] = None
+    escalations: Optional[float] = None
+    defectPts: Optional[str] = None
+    incidentPts: Optional[str] = None
+    riskPts: Optional[str] = None
+    sowPts: Optional[str] = None
+    escalationPts: Optional[str] = None
+
+class TeamProfileUpdate(TeamProfileBase):
+    pass
+
+class TeamProfileResponse(TeamProfileBase):
+    id: int
+    team_id: int
+    class Config:
+        from_attributes = True
+
 class Token(BaseModel):
     access_token: str
     token_type: str

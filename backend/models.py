@@ -108,3 +108,46 @@ class Detail(Base):
     engagementCode = Column(String)
     lobLead = Column(String)
     processComp = Column(Float)
+
+class TeamProfile(Base):
+    __tablename__ = "team_profiles"
+    id = Column(Integer, primary_key=True, index=True)
+    team_id = Column(Integer, ForeignKey("teams.id"), unique=True)
+    
+    # General Info
+    catManager = Column(String, nullable=True)
+    engagementCode = Column(String, nullable=True)
+    lobLead = Column(String, nullable=True)
+    
+    # Capability
+    cloudProf = Column(String, nullable=True)
+    cicdSetup = Column(String, nullable=True)
+    cicdMat = Column(String, nullable=True)
+    autoToolsReq = Column(String, nullable=True)
+    buildToolsReq = Column(String, nullable=True)
+    autoToolPts = Column(String, nullable=True)
+    buildToolPts = Column(String, nullable=True)
+    
+    # Automation
+    autoCoverage = Column(Float, nullable=True)
+    autoStability = Column(Float, nullable=True)
+    regRunTime = Column(Float, nullable=True)
+    regExecTimeNoAuto = Column(Float, nullable=True)
+    kt = Column(Float, nullable=True)
+    ktPrep = Column(String, nullable=True)
+    assets = Column(Float, nullable=True)
+    assetPts = Column(String, nullable=True)
+    autoBugs = Column(Float, nullable=True)
+    autoBugsPts = Column(String, nullable=True)
+    
+    # Program Health
+    defectLeakage = Column(Float, nullable=True)
+    prodIncidents = Column(Float, nullable=True)
+    openRisks = Column(Float, nullable=True)
+    sowMilestones = Column(String, nullable=True)
+    escalations = Column(Float, nullable=True)
+    defectPts = Column(String, nullable=True)
+    incidentPts = Column(String, nullable=True)
+    riskPts = Column(String, nullable=True)
+    sowPts = Column(String, nullable=True)
+    escalationPts = Column(String, nullable=True)

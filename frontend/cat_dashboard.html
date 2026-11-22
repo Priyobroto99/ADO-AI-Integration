@@ -748,18 +748,17 @@
                     </select>
                 </div>
 
-                <div class="flex gap-4 border-b border-tremor-border mb-4 items-center">
-                    <button id="tabMetrics"
-                        class="px-4 py-2 text-sm font-medium text-tremor-brand-DEFAULT border-b-2 border-tremor-brand-DEFAULT">Metrics</button>
-                    <button id="tabDetails"
-                        class="px-4 py-2 text-sm font-medium text-tremor-content hover:text-tremor-content-strong">Details</button>
+                <div class="flex gap-4 border-b border-tremor-border mb-4 items-center flex-wrap">
+                    <button id="tabSprint"
+                        class="px-4 py-2 text-sm font-medium text-tremor-brand-DEFAULT border-b-2 border-tremor-brand-DEFAULT">Sprint Delivery</button>
+                    <button id="tabProfile"
+                        class="px-4 py-2 text-sm font-medium text-tremor-content hover:text-tremor-content-strong">Team Profile (Static)</button>
                     <button id="tabAdo"
-                        class="px-4 py-2 text-sm font-medium text-tremor-content hover:text-tremor-content-strong">ADO
-                        Setup</button>
+                        class="px-4 py-2 text-sm font-medium text-tremor-content hover:text-tremor-content-strong">ADO Setup</button>
                     <button id="tabConfigs"
                         class="px-4 py-2 text-sm font-medium text-tremor-content hover:text-tremor-content-strong hidden">Configurations</button>
                     <button id="syncAdoBtn"
-                        class="ml-auto px-4 py-1.5 bg-blue-100 text-blue-700 text-sm font-medium rounded-md hover:bg-blue-200 border border-blue-300 shadow-sm flex items-center gap-2 hidden">
+                        class="ml-auto px-4 py-1.5 bg-blue-100 text-blue-700 text-sm font-medium rounded-md hover:bg-blue-200 border border-blue-300 shadow-sm flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
@@ -940,7 +939,8 @@
             sprints: [],
             metrics: [], // array of objects { engagement, spoc, ...cols }
             details: [],
-            ragConfig: {}
+            ragConfig: {},
+            profiles: []
         };
         let currentEngagement = "";
         let currentTab = "main";
@@ -1153,16 +1153,366 @@
             `;
         }
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+                function parseUserStories(raw) {
+            if (!raw) return [];
+            if (Array.isArray(raw)) return raw;
+            if (typeof raw !== 'string') return [];
+
+            const trimmed = raw.trim();
+
+            // 1. JSON array format
+            if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        return parsed.map(item => {
+                            if (typeof item === 'object' && item !== null) {
+                                const pts = item.story_points !== undefined && item.story_points !== null ? parseFloat(item.story_points) || 0 : (parseFloat(item.points) || 0);
+                                return {
+                                    id: item.id || '',
+                                    title: item.title || '',
+                                    points: pts,
+                                    story_points: pts,
+                                    assignee: item.assignee || 'Unassigned',
+                                    state: item.state || '',
+                                    type: item.type || 'User Story',
+                                    completed: Boolean(item.completed)
+                                };
+                            } else {
+                                return {
+                                    id: '',
+                                    title: String(item).trim(),
+                                    points: 0,
+                                    story_points: 0,
+                                    assignee: 'Unassigned',
+                                    state: '',
+                                    type: 'User Story',
+                                    completed: false
+                                };
+                            }
+                        });
+                    }
+                } catch(e) {}
+            }
+
+            return reconcileStories(raw, []);
+        }
+
+        function reconcileStories(text, originalStories = []) {
+            if (!text || !text.trim()) return [];
+            let rawEntries = [];
+            const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            
+            if (lines.length > 1) {
+                // When there are multiple lines, each line is exactly one story.
+                // NEVER split on single pipes '|' because story names frequently have internal pipe separations!
+                lines.forEach(line => {
+                    if (line.includes('||')) {
+                        line.split('||').forEach(p => { if (p.trim()) rawEntries.push(p.trim()); });
+                    } else {
+                        rawEntries.push(line);
+                    }
+                });
+            } else if (lines.length === 1) {
+                const single = lines[0];
+                if (single.includes('||')) {
+                    single.split('||').forEach(p => { if (p.trim()) rawEntries.push(p.trim()); });
+                } else {
+                    // Check if single line matches an original story title with pipes
+                    const isSingleOriginalStory = originalStories && originalStories.some(o => o.title && o.title.toLowerCase().trim() === single.toLowerCase().trim());
+                    if (!isSingleOriginalStory && single.includes(' | ')) {
+                        single.split(' | ').forEach(p => { if (p.trim()) rawEntries.push(p.trim()); });
+                    } else if (!isSingleOriginalStory && single.includes('|')) {
+                        single.split('|').forEach(p => { if (p.trim()) rawEntries.push(p.trim()); });
+                    } else {
+                        rawEntries.push(single);
+                    }
+                }
+            }
+
+            return rawEntries.map((entry, idx) => {
+                let cleanEntry = entry.replace(/^[•\-\*]\s*/, '').trim();
+                let id = '';
+                let title = cleanEntry;
+                let points = 0;
+                let assignee = 'Unassigned';
+                let state = '';
+                let completed = false;
+
+                // Check pattern: [#12345] Story Title
+                const idMatch = title.match(/^\[#?(\d+)\]\s*(.*)/);
+                if (idMatch) {
+                    id = idMatch[1];
+                    title = idMatch[2].trim();
+                }
+
+                // Check pattern: (X pts) or (X points)
+                const ptsMatch = title.match(/\((\d+(?:\.\d+)?)\s*(?:pts|points)?\)/i);
+                if (ptsMatch) {
+                    points = parseFloat(ptsMatch[1]) || 0;
+                    title = title.replace(ptsMatch[0], '').trim();
+                }
+
+                // Check pattern: - Assignee or – Assignee (DO NOT use pipe | here, as story titles contain pipes)
+                const assigneeMatch = title.match(/(?:\s*[-–—]\s*)([A-Za-z\s.'`]+)$/);
+                if (assigneeMatch && assigneeMatch[1].trim().length > 1) {
+                    assignee = assigneeMatch[1].trim();
+                    title = title.substring(0, title.lastIndexOf(assigneeMatch[0])).trim();
+                }
+
+                let type = 'User Story';
+
+                // Check pattern: [Task] or [User Story] at start
+                let typeMatch = title.match(/^\[(Task|User Story)\]\s*/i);
+                if (typeMatch) {
+                    type = typeMatch[1].toLowerCase() === 'task' ? 'Task' : 'User Story';
+                    title = title.substring(typeMatch[0].length).trim();
+                }
+
+                // Match with original stories if available
+                let matched = null;
+                if (id) {
+                    matched = originalStories.find(o => String(o.id) === String(id));
+                }
+                if (!matched && title) {
+                    matched = originalStories.find(o => o.title && o.title.toLowerCase().trim() === title.toLowerCase().trim());
+                }
+                if (!matched && originalStories[idx] && rawEntries.length === originalStories.length) {
+                    matched = originalStories[idx];
+                }
+
+                if (matched) {
+                    if (!id && matched.id) id = matched.id;
+                    if (!points && (matched.story_points || matched.points)) points = parseFloat(matched.story_points || matched.points) || 0;
+                    if (assignee === 'Unassigned' && matched.assignee && matched.assignee !== 'Unassigned') assignee = matched.assignee;
+                    if (matched.state) state = matched.state;
+                    if (matched.type) type = matched.type;
+                    if (matched.completed) completed = matched.completed;
+                }
+
+                return {
+                    id: id || '',
+                    title: title || cleanEntry,
+                    story_points: points,
+                    points: points,
+                    assignee: assignee || 'Unassigned',
+                    state: state || '',
+                    type: type || 'User Story',
+                    completed: Boolean(completed)
+                };
+            });
+        }
+
+        function filterStoriesTable(query) {
+            const q = (query || '').toLowerCase().trim();
+            const rows = document.querySelectorAll('.story-table-row');
+            let visible = 0;
+            rows.forEach(r => {
+                const text = r.getAttribute('data-search') || '';
+                if (!q || text.includes(q)) {
+                    r.style.display = '';
+                    visible++;
+                } else {
+                    r.style.display = 'none';
+                }
+            });
+            const countEl = document.getElementById('storyRowCount');
+            if (countEl) countEl.textContent = `Showing ${visible} of ${rows.length} work items`;
+        }
+
+        function createDeliveryStoriesPanel(raw) {
+            const stories = parseUserStories(raw);
+
+            if (stories.length === 0) {
+                return `
+                    <div class="w-full rounded-tremor-default bg-white p-5 ring-1 ring-tremor-border shadow-tremor-card">
+                        <div class="flex items-center gap-2 border-b border-tremor-border pb-2">
+                            <svg class="w-5 h-5 text-tremor-content-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            <h4 class="font-medium text-tremor-content-strong text-base">User Stories & Tasks Assigned</h4>
+                        </div>
+                        <p class="text-sm text-tremor-content-subtle italic mt-4">— No work items recorded for this sprint</p>
+                    </div>
+                `;
+            }
+
+            const totalItems = stories.length;
+            const storiesCount = stories.filter(s => (s.type || '').toLowerCase() !== 'task').length;
+            const tasksCount = stories.filter(s => (s.type || '').toLowerCase() === 'task').length;
+            const totalPoints = stories.reduce((sum, s) => sum + (parseFloat(s.points) || 0), 0);
+            const assignedCount = stories.filter(s => s.assignee && s.assignee !== 'Unassigned' && s.assignee !== '—').length;
+            const completedCount = stories.filter(s => s.completed || ['closed', 'done', 'resolved'].includes(String(s.state).toLowerCase())).length;
+
+            const summaryBadges = `
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-tremor-small text-xs font-medium bg-tremor-brand-faint text-tremor-brand-DEFAULT ring-1 ring-inset ring-tremor-brand-muted">
+                        <strong>${totalItems}</strong> Total
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-tremor-small text-xs font-medium bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200">
+                        <strong>${storiesCount}</strong> Stories
+                    </span>
+                    ${tasksCount > 0 ? `
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-tremor-small text-xs font-medium bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200">
+                        <strong>${tasksCount}</strong> Tasks
+                    </span>` : ''}
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-tremor-small text-xs font-medium bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200">
+                        <strong>${totalPoints % 1 === 0 ? totalPoints : totalPoints.toFixed(1)}</strong> Story Points
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-tremor-small text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                        <strong>${completedCount}</strong> Completed
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-tremor-small text-xs font-medium bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-200">
+                        <strong>${assignedCount}</strong> Assigned
+                    </span>
+                </div>
+            `;
+
+            const filterInput = `
+                <div class="relative w-full sm:w-64">
+                    <input type="text" id="storyTableFilter" placeholder="Filter by type, title, assignee..." oninput="filterStoriesTable(this.value)" class="w-full text-xs rounded-tremor-default border border-tremor-border px-3 py-1.5 pr-8 focus:outline-none focus:ring-1 focus:ring-tremor-brand-DEFAULT placeholder:text-gray-400">
+                    <svg class="w-4 h-4 text-gray-400 absolute right-2.5 top-2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            `;
+
+            const rowsHtml = stories.map((s, idx) => {
+                const st = String(s.state || '').trim();
+                const stLower = st.toLowerCase();
+                let stateBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700">${escapeHtml(st) || '—'}</span>`;
+                if (['closed', 'done', 'resolved'].includes(stLower) || s.completed) {
+                    stateBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Done</span>`;
+                } else if (['active', 'in progress', 'doing'].includes(stLower)) {
+                    stateBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20">Active</span>`;
+                } else if (['new', 'to do', 'proposed'].includes(stLower)) {
+                    stateBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20">New</span>`;
+                } else if (stLower.includes('deferred')) {
+                    stateBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20">Deferred</span>`;
+                }
+
+                const isTask = (s.type || '').toLowerCase() === 'task';
+                const typeBadge = isTask
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-600/20 whitespace-nowrap">
+                         <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                         Task
+                       </span>`
+                    : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20 whitespace-nowrap">
+                         <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                         User Story
+                       </span>`;
+
+                const ptsVal = parseFloat(s.points);
+                const ptsBadge = (!isNaN(ptsVal) && ptsVal > 0)
+                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-600/20">${ptsVal % 1 === 0 ? ptsVal : ptsVal.toFixed(1)} pts</span>`
+                    : `<span class="text-xs text-gray-400 font-normal">—</span>`;
+
+                const hasAssignee = s.assignee && s.assignee !== 'Unassigned' && s.assignee !== '—';
+                const assigneeHtml = hasAssignee
+                    ? `<div class="flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-tremor-brand-faint text-tremor-brand-DEFAULT flex items-center justify-center text-[10px] font-bold uppercase shrink-0">${s.assignee.charAt(0)}</span><span class="text-xs font-medium text-gray-800 truncate max-w-[160px]" title="${escapeHtml(s.assignee)}">${escapeHtml(s.assignee)}</span></div>`
+                    : `<span class="text-xs text-gray-400 italic">Unassigned</span>`;
+
+                const idHtml = s.id 
+                    ? `<span class="font-mono text-xs text-tremor-brand-DEFAULT font-medium">#${escapeHtml(String(s.id))}</span>`
+                    : `<span class="text-xs text-gray-400">${idx + 1}</span>`;
+
+                const searchMeta = `${s.id} ${s.type || (isTask ? 'task' : 'user story')} ${s.title} ${s.assignee} ${s.state}`.toLowerCase();
+
+                return `
+                    <tr class="story-table-row hover:bg-gray-50/75 border-b border-gray-100 transition-colors" data-search="${escapeHtml(searchMeta)}">
+                        <td class="py-2.5 px-3 whitespace-nowrap text-center">${idHtml}</td>
+                        <td class="py-2.5 px-3 whitespace-nowrap text-center">${typeBadge}</td>
+                        <td class="py-2.5 px-3 text-xs text-gray-900 font-medium leading-relaxed">${escapeHtml(s.title)}</td>
+                        <td class="py-2.5 px-3 whitespace-nowrap text-center">${ptsBadge}</td>
+                        <td class="py-2.5 px-3 whitespace-nowrap">${assigneeHtml}</td>
+                        <td class="py-2.5 px-3 whitespace-nowrap text-center">${stateBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            return `
+                <div class="w-full rounded-tremor-default bg-white ring-1 ring-tremor-border shadow-tremor-card overflow-hidden">
+                    <div class="p-5 border-b border-tremor-border bg-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-tremor-brand-DEFAULT" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                                <h4 class="font-semibold text-tremor-content-strong text-base">User Stories & Tasks Assigned</h4>
+                            </div>
+                            <p class="text-xs text-tremor-content-subtle mt-1">Detailed breakdown of user stories and tasks, assigned story points, owners, and workflow states.</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                            ${summaryBadges}
+                            ${filterInput}
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse" id="storiesTable">
+                            <thead class="bg-gray-50/90 sticky top-0 backdrop-blur-sm z-10 border-b border-gray-200">
+                                <tr class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th class="py-2.5 px-3 text-center w-16">ID</th>
+                                    <th class="py-2.5 px-3 text-center w-28">Type</th>
+                                    <th class="py-2.5 px-3">Title</th>
+                                    <th class="py-2.5 px-3 text-center w-24">Story Points</th>
+                                    <th class="py-2.5 px-3 w-48">Assignee</th>
+                                    <th class="py-2.5 px-3 text-center w-24">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3 bg-gray-50/50 border-t border-gray-100 text-[11px] text-gray-500 flex justify-between items-center">
+                        <span id="storyRowCount">Showing ${stories.length} work items</span>
+                        <span class="text-gray-400">Synced directly from Azure DevOps</span>
+                    </div>
+                </div>
+            `;
+        }
+
         function createListPanel(title, rawPoints) {
             let pts = [];
             if (rawPoints && typeof rawPoints === 'string') {
-                pts = rawPoints.split('|').map(s => s.trim()).filter(s => s.length > 0);
+                const trimmed = rawPoints.trim();
+                // 1. JSON array format (e.g. ["Story 1 | Part A", "Story 2"])
+                if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                    try {
+                        const parsed = JSON.parse(trimmed);
+                        if (Array.isArray(parsed)) pts = parsed.map(s => String(s).trim()).filter(s => s.length > 0);
+                    } catch (e) {}
+                }
+
+                // 2. Multiline / newline-separated (standard for ADO sync and multiline textareas)
+                if (pts.length === 0 && rawPoints.includes('\n')) {
+                    pts = rawPoints.split(/\r?\n/).map(s => s.replace(/^[•\-\*]\s*/, '').trim()).filter(s => s.length > 0);
+                }
+
+                // 3. Bullet-prefixed single line (e.g. "• Story 1 | Part A")
+                if (pts.length === 0 && (trimmed.startsWith('•') || trimmed.startsWith('- ') || trimmed.startsWith('* '))) {
+                    pts = [trimmed.replace(/^[•\-\*]\s*/, '').trim()].filter(s => s.length > 0);
+                }
+
+                // 4. Double-pipe delimiter (if used: "Item 1 || Item 2")
+                if (pts.length === 0 && rawPoints.includes('||')) {
+                    pts = rawPoints.split('||').map(s => s.trim()).filter(s => s.length > 0);
+                }
+
+                // 5. Fallback: legacy pipe-separated string
+                if (pts.length === 0 && trimmed.length > 0) {
+                    pts = rawPoints.split('|').map(s => s.trim()).filter(s => s.length > 0);
+                }
             }
 
             let listHtml = `<p class="text-sm text-tremor-content-subtle italic mt-2">— No data available</p>`;
             if (pts.length > 0) {
                 listHtml = `<ul class="mt-3 space-y-2 text-sm text-tremor-content-strong list-disc pl-4 marker:text-tremor-brand-DEFAULT">` +
-                    pts.map(p => `<li>${p}</li>`).join('') +
+                    pts.map(p => `<li>${p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`).join('') +
                     `</ul>`;
             }
 
@@ -1254,16 +1604,17 @@
             document.getElementById('bannerWeek').textContent = weekText;
             document.getElementById('bannerDates').textContent = datesText;
 
+            const curP = (globalData.profiles && globalData.profiles.find(x => x.engagement === currentEngagement)) || {};
             const bannerCatManager = document.getElementById('bannerCatManager');
             const bannerEngagementCode = document.getElementById('bannerEngagementCode');
             if (bannerCatManager) {
-                bannerCatManager.textContent = curD.catManager || "--";
+                bannerCatManager.textContent = curP.catManager || curD.catManager || "--";
             }
             if (bannerEngagementCode) {
-                bannerEngagementCode.textContent = curD.engagementCode || "--";
+                bannerEngagementCode.textContent = curP.engagementCode || curD.engagementCode || "--";
             }
 
-            document.getElementById('currentSpoc').textContent = curM.spoc || "--";
+            document.getElementById('currentSpoc').textContent = curP.spoc || curM.spoc || "--";
 
             // Render Tabs
             renderDelivery();
@@ -1290,7 +1641,7 @@
             `;
 
             document.getElementById('deliveryDetailsGrid').innerHTML = `
-                ${createListPanel("User Stories/Tasks Assigned", d.usAssignedPts)}
+                ${createDeliveryStoriesPanel(d.usAssignedPts)}
             `;
         }
 
@@ -1299,21 +1650,34 @@
             const sprintId = sprintSel ? sprintSel.value : null;
             const m = globalData.metrics.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
             const d = globalData.details.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
+            const p = (globalData.profiles && globalData.profiles.find(x => x.engagement === currentEngagement)) || {};
+
+            const defectLeakage = p.defectLeakage !== null && p.defectLeakage !== undefined ? p.defectLeakage : m.defectLeakage;
+            const prodIncidents = p.prodIncidents !== null && p.prodIncidents !== undefined ? p.prodIncidents : m.prodIncidents;
+            const openRisks = p.openRisks !== null && p.openRisks !== undefined ? p.openRisks : m.openRisks;
+            const escalations = p.escalations !== null && p.escalations !== undefined ? p.escalations : m.escalations;
+            const sowMilestones = p.sowMilestones !== null && p.sowMilestones !== undefined ? p.sowMilestones : m.sowMilestones;
+
+            const defectPts = p.defectPts || d.defectPts;
+            const incidentPts = p.incidentPts || d.incidentPts;
+            const riskPts = p.riskPts || d.riskPts;
+            const sowPts = p.sowPts || d.sowPts;
+            const escalationPts = p.escalationPts || d.escalationPts;
 
             document.getElementById('healthMetricsGrid').innerHTML = `
-                ${createCard("Defect Leakage", m.defectLeakage, 'defectLeakage', "%")}
-                ${createCard("Production Incidents", m.prodIncidents, 'prodIncidents')}
-                ${createCard("Open Risks & Issues", m.openRisks, 'openRisks')}
-                ${createCard("Escalations", m.escalations, 'escalations')}
-                ${createCard("SOW Milestones", m.sowMilestones, RAG.NONE)}
+                ${createCard("Defect Leakage", defectLeakage, 'defectLeakage', "%")}
+                ${createCard("Production Incidents", prodIncidents, 'prodIncidents')}
+                ${createCard("Open Risks & Issues", openRisks, 'openRisks')}
+                ${createCard("Escalations", escalations, 'escalations')}
+                ${createCard("SOW Milestones", sowMilestones, RAG.NONE)}
             `;
 
             document.getElementById('healthDetailsGrid').innerHTML = `
-                ${createListPanel("Defect Leakages", d.defectPts)}
-                ${createListPanel("Production Incidents", d.incidentPts)}
-                ${createListPanel("Open Risks & Issues", d.riskPts)}
-                ${createListPanel("SOW Milestones", d.sowPts)}
-                ${createListPanel("Escalations RCA", d.escalationPts)}
+                ${createListPanel("Defect Leakages", defectPts)}
+                ${createListPanel("Production Incidents", incidentPts)}
+                ${createListPanel("Open Risks & Issues", riskPts)}
+                ${createListPanel("SOW Milestones", sowPts)}
+                ${createListPanel("Escalations RCA", escalationPts)}
             `;
         }
 
@@ -1322,21 +1686,30 @@
             const sprintId = sprintSel ? sprintSel.value : null;
             const m = globalData.metrics.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
             const d = globalData.details.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
+            const p = (globalData.profiles && globalData.profiles.find(x => x.engagement === currentEngagement)) || {};
+
+            const autoToolsReq = p.autoToolsReq !== null && p.autoToolsReq !== undefined ? p.autoToolsReq : m.autoToolsReq;
+            const buildToolsReq = p.buildToolsReq !== null && p.buildToolsReq !== undefined ? p.buildToolsReq : m.buildToolsReq;
+            const autoToolPts = p.autoToolPts || d.autoToolPts;
+            const buildToolPts = p.buildToolPts || d.buildToolPts;
+            const cloudProf = p.cloudProf || d.cloudProf;
+            const cicdSetup = p.cicdSetup || d.cicdSetup;
+            const ktPrep = p.ktPrep || d.ktPrep;
 
             document.getElementById('capabilityMetricsGrid').innerHTML = `
-                ${createCard("Automation Tools Competency", m.autoToolsReq, 'autoToolsReq')}
-                ${createCard("Build Tools Competency", m.buildToolsReq, 'buildToolsReq')}
+                ${createCard("Automation Tools Competency", autoToolsReq, 'autoToolsReq')}
+                ${createCard("Build Tools Competency", buildToolsReq, 'buildToolsReq')}
             `;
 
             document.getElementById('capabilityDetailsGrid').innerHTML = `
                 <div class="space-y-4">
-                    ${createListPanel("Automation Tools Required", d.autoToolPts)}
-                    ${createListPanel("Build Tools Required", d.buildToolPts)}
+                    ${createListPanel("Automation Tools Required", autoToolPts)}
+                    ${createListPanel("Build Tools Required", buildToolPts)}
                 </div>
                 <div class="space-y-4">
-                    ${createYesNoBadge("Cloud & DevOps Proficiencies (Azure/AWS)", d.cloudProf, getYesNoRag(d.cloudProf))}
-                    ${createYesNoBadge("CI/CD Pipeline Setup Proficiency", d.cicdSetup, getYesNoRag(d.cicdSetup))}
-                    ${createYesNoBadge("KT Videos/Documents Prepared", d.ktPrep)}
+                    ${createYesNoBadge("Cloud & DevOps Proficiencies (Azure/AWS)", cloudProf, getYesNoRag(cloudProf))}
+                    ${createYesNoBadge("CI/CD Pipeline Setup Proficiency", cicdSetup, getYesNoRag(cicdSetup))}
+                    ${createYesNoBadge("KT Videos/Documents Prepared", ktPrep)}
                 </div>
             `;
         }
@@ -1346,23 +1719,34 @@
             const sprintId = sprintSel ? sprintSel.value : null;
             const m = globalData.metrics.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
             const d = globalData.details.find(x => x.engagement === currentEngagement && x.sprint_id == sprintId) || {};
+            const p = (globalData.profiles && globalData.profiles.find(x => x.engagement === currentEngagement)) || {};
+
+            const autoCoverage = p.autoCoverage !== null && p.autoCoverage !== undefined ? p.autoCoverage : m.autoCoverage;
+            const autoStability = p.autoStability !== null && p.autoStability !== undefined ? p.autoStability : m.autoStability;
+            const assets = p.assets !== null && p.assets !== undefined ? p.assets : m.assets;
+            const regRunTime = p.regRunTime !== null && p.regRunTime !== undefined ? p.regRunTime : m.regRunTime;
+            const regExecTimeNoAuto = p.regExecTimeNoAuto !== null && p.regExecTimeNoAuto !== undefined ? p.regExecTimeNoAuto : m.regExecTimeNoAuto;
+            const autoBugs = p.autoBugs !== null && p.autoBugs !== undefined ? p.autoBugs : m.autoBugs;
+            const autoBugsPts = p.autoBugsPts || d.autoBugsPts;
+            const assetPts = p.assetPts || d.assetPts;
+            const cicdMat = p.cicdMat || d.cicdMat;
 
             document.getElementById('automationMetricsGrid').innerHTML = `
-                ${createCard("Automation Coverage", m.autoCoverage, 'autoCoverage', "%")}
-                ${createCard("Automation Stability", m.autoStability, 'autoStability', "%")}
-                ${createCard("Reusable Assets Created", m.assets, RAG.NONE, "", "📊 Informational")}
-                ${createCard("Regression Run Time (hrs)", m.regRunTime, RAG.NONE, " hrs", "📈 Track Trend")}
-                ${createCard("Manual Test Execution time (hrs)", m.regExecTimeNoAuto, RAG.NONE, " hrs", "📈 Track Trend")}
-                ${createCard("Automation Bugs Reported", m.autoBugs, RAG.NONE)}
+                ${createCard("Automation Coverage", autoCoverage, 'autoCoverage', "%")}
+                ${createCard("Automation Stability", autoStability, 'autoStability', "%")}
+                ${createCard("Reusable Assets Created", assets, RAG.NONE, "", "📊 Informational")}
+                ${createCard("Regression Run Time (hrs)", regRunTime, RAG.NONE, " hrs", "📈 Track Trend")}
+                ${createCard("Manual Test Execution time (hrs)", regExecTimeNoAuto, RAG.NONE, " hrs", "📈 Track Trend")}
+                ${createCard("Automation Bugs Reported", autoBugs, RAG.NONE)}
             `;
 
             document.getElementById('automationDetailsGrid').innerHTML = `
                 <div class="space-y-4">
-                    ${createListPanel("Automation Bugs Reported", d.autoBugsPts)}
-                    ${createListPanel("Assets Reused", d.assetPts)}
+                    ${createListPanel("Automation Bugs Reported", autoBugsPts)}
+                    ${createListPanel("Assets Reused", assetPts)}
                 </div>
                 <div>
-                    ${createYesNoBadge("CI/CD Maturity", d.cicdMat, getYesNoRag(d.cicdMat))}
+                    ${createYesNoBadge("CI/CD Maturity", cicdMat, getYesNoRag(cicdMat))}
                 </div>
             `;
         }
@@ -1472,7 +1856,20 @@
 
             sprintMetrics.forEach(m => {
                 const d = globalData.details.find(x => x.engagement === m.engagement && x.sprint_id == sprintId) || {};
+                const p = (globalData.profiles && globalData.profiles.find(x => x.engagement === m.engagement)) || {};
                 const eng = m.engagement;
+
+                const defLeak = p.defectLeakage !== null && p.defectLeakage !== undefined ? p.defectLeakage : m.defectLeakage;
+                const pInc = p.prodIncidents !== null && p.prodIncidents !== undefined ? p.prodIncidents : m.prodIncidents;
+                const oRisk = p.openRisks !== null && p.openRisks !== undefined ? p.openRisks : m.openRisks;
+                const esc = p.escalations !== null && p.escalations !== undefined ? p.escalations : m.escalations;
+                const aCov = p.autoCoverage !== null && p.autoCoverage !== undefined ? p.autoCoverage : m.autoCoverage;
+                const aStab = p.autoStability !== null && p.autoStability !== undefined ? p.autoStability : m.autoStability;
+                const aTools = p.autoToolsReq !== null && p.autoToolsReq !== undefined ? p.autoToolsReq : m.autoToolsReq;
+                const bTools = p.buildToolsReq !== null && p.buildToolsReq !== undefined ? p.buildToolsReq : m.buildToolsReq;
+                const cMat = p.cicdMat || d.cicdMat;
+                const cProf = p.cloudProf || d.cloudProf;
+                const cSetup = p.cicdSetup || d.cicdSetup;
 
                 const deliveryRags = [
                     getRagDef('spAssigned', m.spAssigned, eng),
@@ -1481,23 +1878,23 @@
                 ];
 
                 const healthRags = [
-                    getRagDef('defectLeakage', m.defectLeakage, eng),
-                    getRagDef('prodIncidents', m.prodIncidents, eng),
-                    getRagDef('openRisks', m.openRisks, eng),
-                    getRagDef('escalations', m.escalations, eng)
+                    getRagDef('defectLeakage', defLeak, eng),
+                    getRagDef('prodIncidents', pInc, eng),
+                    getRagDef('openRisks', oRisk, eng),
+                    getRagDef('escalations', esc, eng)
                 ];
 
                 const autoRags = [
-                    getRagDef('autoCoverage', m.autoCoverage, eng),
-                    getRagDef('autoStability', m.autoStability, eng),
-                    getYesNoRag(d.cicdMat)
+                    getRagDef('autoCoverage', aCov, eng),
+                    getRagDef('autoStability', aStab, eng),
+                    getYesNoRag(cMat)
                 ];
 
                 const capabilityRags = [
-                    getRagDef('autoToolsReq', m.autoToolsReq, eng),
-                    getRagDef('buildToolsReq', m.buildToolsReq, eng),
-                    getYesNoRag(d.cloudProf),
-                    getYesNoRag(d.cicdSetup)
+                    getRagDef('autoToolsReq', aTools, eng),
+                    getRagDef('buildToolsReq', bTools, eng),
+                    getYesNoRag(cProf),
+                    getYesNoRag(cSetup)
                 ];
 
                 const complianceRags = [];
@@ -1534,9 +1931,9 @@
                 checkWarning('autoStability', 'Auto Stability', m.autoStability);
                 checkWarning('autoToolsReq', 'Auto Tools Competency', m.autoToolsReq);
                 checkWarning('buildToolsReq', 'Build Tools Competency', m.buildToolsReq);
-                if (getYesNoRag(d.cloudProf) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">Cloud Prof.</span>`);
-                if (getYesNoRag(d.cicdSetup) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">CI/CD Setup</span>`);
-                if (getYesNoRag(d.cicdMat) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">CI/CD Maturity</span>`);
+                if (getYesNoRag(cProf) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">Cloud Prof.</span>`);
+                if (getYesNoRag(cSetup) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">CI/CD Setup</span>`);
+                if (getYesNoRag(cMat) === RAG.RED) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">CI/CD Maturity</span>`);
                 if (d.processComp !== 100) earlyWarnings.push(`<span class="inline-flex items-center rounded-tremor-small bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-800 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">Timesheets Missing</span>`);
 
                 let uniqueWarnings = [...new Set(earlyWarnings)];
@@ -1848,34 +2245,101 @@
         </div>
     </div>
 
-    <!-- ADO Review Modal -->
-    <div id="adoReviewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Review ADO Sync Data</h3>
-                <p id="adoReviewIteration" class="text-sm text-gray-500 mt-1 mb-4"></p>
-                <div class="mt-2 text-left bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <p class="text-sm font-medium">Stories Assigned: <span id="revUsAssigned"
-                            class="font-normal"></span></p>
-                    <p class="text-sm font-medium">Stories Completed: <span id="revUsCompleted"
-                            class="font-normal"></span></p>
-                    <p class="text-sm font-medium mt-2">Points Assigned: <span id="revSpAssigned"
-                            class="font-normal"></span></p>
-                    <p class="text-sm font-medium">Points Completed: <span id="revSpCompleted"
-                            class="font-normal"></span></p>
-                    <div id="adoStoryNames" class="mt-4 max-h-40 overflow-y-auto text-sm border-t pt-2 text-left"></div>
+    <!-- ADO Review & Filter Modal -->
+    <div id="adoReviewModal" class="fixed inset-0 bg-gray-600 bg-opacity-60 overflow-y-auto h-full w-full hidden z-50 flex items-start justify-center p-4">
+        <div class="relative top-6 mx-auto p-6 border max-w-3xl w-full shadow-2xl rounded-2xl bg-white mb-10 transition-all">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Review & Filter ADO Sync Data
+                    </h3>
+                    <p id="adoReviewIteration" class="text-xs text-gray-500 mt-0.5 font-medium"></p>
                 </div>
-                <p id="adoReviewError" class="text-red-500 text-xs mt-2 hidden"></p>
-                <div class="items-center px-4 py-3 mt-4">
-                    <button id="confirmAdoSyncBtn"
-                        class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 flex justify-center items-center">
-                        Confirm & Update DB
-                    </button>
-                    <button id="closeAdoReviewBtn"
-                        class="mt-2 px-4 py-2 bg-gray-400 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300">
-                        Discard
-                    </button>
+                <button id="closeAdoReviewXBtn" type="button" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition" title="Close dialog">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Overwrite Warning Banner (Dynamic) -->
+            <div id="adoOverwriteWarning" class="hidden mt-4 p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-left text-xs text-amber-900">
+                <div class="flex items-start gap-2.5">
+                    <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <div class="flex-1">
+                        <strong class="font-bold text-amber-800 text-sm">Sprint Already Contains Recorded Data!</strong>
+                        <p id="adoOverwriteWarningMsg" class="mt-0.5 text-amber-800 leading-relaxed"></p>
+                        <label class="mt-2.5 flex items-center gap-2 cursor-pointer font-semibold text-amber-950 select-none bg-amber-100/80 p-2.5 rounded-lg border border-amber-200 hover:bg-amber-100 transition">
+                            <input type="checkbox" id="confirmOverwriteCheck" class="rounded border-amber-400 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                            <span>I understand and confirm overwriting this sprint's existing data with selected ADO items</span>
+                        </label>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Team Members / QA Filter Section -->
+            <div class="mt-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>👥 Select Team Members</span>
+                            <span class="text-[11px] font-normal text-blue-600 lowercase">(QA Team Filter)</span>
+                        </h4>
+                        <p class="text-[11px] text-gray-500 mt-0.5">Select only QA team members. User stories of unchecked members will be excluded from this sprint.</p>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        <button type="button" id="btnSelectAllAssignees" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-0.5 hover:bg-blue-100/50 rounded transition">Select All</button>
+                        <span class="text-gray-300">|</span>
+                        <button type="button" id="btnDeselectAllAssignees" class="text-gray-500 hover:text-gray-700 font-medium px-2 py-0.5 hover:bg-gray-200 rounded transition">Deselect All</button>
+                    </div>
+                </div>
+                <div id="adoAssigneeCheckboxes" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 max-h-44 overflow-y-auto p-1">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Dynamic Metrics Summary Cards (Filtered) -->
+            <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-2.5">
+                    <p class="text-[11px] text-blue-700 font-medium uppercase tracking-wider">Stories Assigned</p>
+                    <p id="revUsAssigned" class="text-lg font-bold text-blue-900 mt-0.5">0</p>
+                </div>
+                <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-2.5">
+                    <p class="text-[11px] text-emerald-700 font-medium uppercase tracking-wider">Stories Completed</p>
+                    <p id="revUsCompleted" class="text-lg font-bold text-emerald-900 mt-0.5">0</p>
+                </div>
+                <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-2.5">
+                    <p class="text-[11px] text-indigo-700 font-medium uppercase tracking-wider">Points Assigned</p>
+                    <p id="revSpAssigned" class="text-lg font-bold text-indigo-900 mt-0.5">0</p>
+                </div>
+                <div class="bg-teal-50/70 border border-teal-200 rounded-xl p-2.5">
+                    <p class="text-[11px] text-teal-700 font-medium uppercase tracking-wider">Points Completed</p>
+                    <p id="revSpCompleted" class="text-lg font-bold text-teal-900 mt-0.5">0</p>
+                </div>
+            </div>
+
+            <!-- Work Items Found Preview -->
+            <div class="mt-4 border border-gray-200 rounded-xl overflow-hidden bg-white">
+                <div class="px-3.5 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between text-xs">
+                    <span class="font-bold text-gray-700" id="adoStoriesCountHeader">User Stories to be Pulled (0)</span>
+                    <span class="text-[11px] text-gray-400">Filtered by selected team members</span>
+                </div>
+                <div id="adoStoryNames" class="max-h-52 overflow-y-auto p-2 text-left">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <p id="adoReviewError" class="text-red-500 text-xs mt-2.5 text-center hidden font-medium"></p>
+
+            <!-- Modal Action Buttons -->
+            <div class="flex items-center justify-end gap-3 mt-5 pt-3 border-t border-gray-200">
+                <button id="closeAdoReviewBtn" type="button" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 focus:outline-none transition">
+                    Discard
+                </button>
+                <button id="confirmAdoSyncBtn" type="button" class="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Confirm & Update DB
+                </button>
             </div>
         </div>
     </div>
@@ -2017,10 +2481,23 @@
             }
         });
 
+        // Trigger login when pressing Enter in Username or Password textbox
+        ['username', 'password'].forEach(id => {
+            const inputEl = document.getElementById(id);
+            if (inputEl) {
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.getElementById('loginBtn').click();
+                    }
+                });
+            }
+        });
+
         let userRole = null;
         let userTeamId = null;
         let teamsList = [];
-        let currentUpdateTab = 'metrics';
+        let currentUpdateTab = 'sprint';
 
         const friendlyNames = {
             'spAssigned': 'Story Points Assigned',
@@ -2176,19 +2653,34 @@
         });
 
 
-        ['tabMetrics', 'tabDetails', 'tabConfigs', 'tabAdo'].forEach(tab => {
-            document.getElementById(tab).addEventListener('click', (e) => {
-                ['tabMetrics', 'tabDetails', 'tabConfigs', 'tabAdo'].forEach(t => {
-                    document.getElementById(t).classList.remove('border-b-2', 'border-tremor-brand-DEFAULT', 'text-tremor-brand-DEFAULT');
-                    document.getElementById(t).classList.add('text-tremor-content');
+        ['tabSprint', 'tabProfile', 'tabConfigs', 'tabAdo'].forEach(tab => {
+            const btnEl = document.getElementById(tab);
+            if (!btnEl) return;
+            btnEl.addEventListener('click', (e) => {
+                ['tabSprint', 'tabProfile', 'tabConfigs', 'tabAdo'].forEach(t => {
+                    const el = document.getElementById(t);
+                    if (el) {
+                        el.classList.remove('border-b-2', 'border-tremor-brand-DEFAULT', 'text-tremor-brand-DEFAULT');
+                        el.classList.add('text-tremor-content');
+                    }
                 });
                 e.target.classList.remove('text-tremor-content');
                 e.target.classList.add('border-b-2', 'border-tremor-brand-DEFAULT', 'text-tremor-brand-DEFAULT');
                 currentUpdateTab = tab.replace('tab', '').toLowerCase();
-                if (currentUpdateTab === 'metrics') {
-                    document.getElementById('syncAdoBtn').classList.remove('hidden');
+                const syncBtn = document.getElementById('syncAdoBtn');
+                const sprintDropdown = document.getElementById('updateSprintSelect');
+                const addSprintBtn = document.getElementById('addSprintBtn');
+
+                if (currentUpdateTab === 'sprint') {
+                    if (syncBtn) syncBtn.classList.remove('hidden');
+                    if (sprintDropdown) sprintDropdown.classList.remove('hidden');
+                    if (addSprintBtn) addSprintBtn.classList.remove('hidden');
+                } else if (currentUpdateTab === 'profile') {
+                    if (syncBtn) syncBtn.classList.add('hidden');
+                    if (sprintDropdown) sprintDropdown.classList.add('hidden');
+                    if (addSprintBtn) addSprintBtn.classList.add('hidden');
                 } else {
-                    document.getElementById('syncAdoBtn').classList.add('hidden');
+                    if (syncBtn) syncBtn.classList.add('hidden');
                 }
                 renderUpdateForm();
             });
@@ -2216,20 +2708,17 @@
             const detail = globalData.details.find(d => d.team_id == teamId && d.sprint_id == sprintId) || {};
 
 
-            const METRIC_SECTIONS = {
-                'Delivery': ['spAssigned', 'spCompleted', 'usPushed', 'usAssigned', 'usCompleted'],
-                'Program Health': ['defectLeakage', 'prodIncidents', 'openRisks', 'escalations', 'sowMilestones'],
-                'Capability & Gaps': ['autoToolsReq', 'buildToolsReq'],
-                'Automation': ['autoCoverage', 'autoStability', 'regRunTime', 'regExecTimeNoAuto', 'autoBugs', 'assets']
+            const SPRINT_SECTIONS = {
+                'Sprint Delivery Metrics': ['spAssigned', 'spCompleted', 'usPushed', 'usAssigned', 'usCompleted'],
+                'Sprint Work Items': ['usAssignedPts'],
+                'Sprint Timesheet Compliance': ['deloitteTime', 'tenroxTime']
             };
 
-            const DETAIL_SECTIONS = {
+            const PROFILE_SECTIONS = {
                 'General Information': ['catManager', 'engagementCode', 'lobLead'],
-                'Delivery Details': ['usAssignedPts'],
-                'Program Health Details': ['defectPts', 'incidentPts', 'riskPts', 'escalationPts', 'sowPts'],
-                'Capability Details': ['autoToolPts', 'buildToolPts', 'cloudProf', 'cicdSetup'],
-                'Automation Details': ['autoBugsPts', 'assetPts', 'ktPrep', 'cicdMat'],
-                'Compliance Details': ['deloitteTime', 'tenroxTime']
+                'Capabilities & Gaps': ['cloudProf', 'cicdSetup', 'cicdMat', 'autoToolsReq', 'buildToolsReq', 'autoToolPts', 'buildToolPts'],
+                'Automation Suite': ['autoCoverage', 'autoStability', 'regRunTime', 'regExecTimeNoAuto', 'ktPrep', 'assets', 'assetPts', 'autoBugs', 'autoBugsPts'],
+                'Program Health (Persistent)': ['defectLeakage', 'prodIncidents', 'openRisks', 'escalations', 'sowMilestones', 'defectPts', 'incidentPts', 'riskPts', 'escalationPts', 'sowPts']
             };
 
             const ADO_SECTIONS = {
@@ -2246,12 +2735,14 @@
             let sections = {};
             let sourceData = {};
 
-            if (currentUpdateTab === 'metrics') {
-                sections = METRIC_SECTIONS;
-                sourceData = { ...metric };
-            } else if (currentUpdateTab === 'details') {
-                sections = DETAIL_SECTIONS;
-                sourceData = { ...detail };
+            const profile = (globalData.profiles && globalData.profiles.find(p => p.team_id == teamId)) || {};
+
+            if (currentUpdateTab === 'sprint' || currentUpdateTab === 'metrics') {
+                sections = SPRINT_SECTIONS;
+                sourceData = { ...metric, ...detail };
+            } else if (currentUpdateTab === 'profile' || currentUpdateTab === 'details') {
+                sections = PROFILE_SECTIONS;
+                sourceData = { ...profile };
             } else if (currentUpdateTab === 'ado') {
                 sections = ADO_SECTIONS;
                 const teamData = teamsList.find(t => t.id == teamId) || {};
@@ -2305,7 +2796,7 @@
                     const div = document.createElement('div');
                     let val = sourceData[k] !== null && sourceData[k] !== undefined ? sourceData[k] : '';
 
-                    if (currentUpdateTab === 'details' && k.endsWith('Pts') && (val === 0 || val === '0')) {
+                    if (k.endsWith('Pts') && (val === 0 || val === '0')) {
                         val = '';
                     }
 
@@ -2322,12 +2813,60 @@
                             <option value="No" ${isNo}>No</option>
                             <option value="NA" ${isNA}>NA</option>
                         </select>`;
-                    } else {
-                        div.innerHTML += `<input type="text" id="input_${k}" value="${val}" class="w-full border border-tremor-border rounded px-3 py-2 text-sm text-gray-700 shadow-sm focus:ring-tremor-brand-DEFAULT focus:border-tremor-brand-DEFAULT">`;
-                        if (currentUpdateTab === 'details' && k.endsWith('Pts')) {
-                            div.innerHTML += `<p class="text-[10px] text-gray-500 mt-1">Pipe separated 'text 1|text2'</p>`;
-                            div.className = 'sm:col-span-2'; // full width
+                    } else if (k === 'usAssignedPts') {
+                        div.className = 'col-span-1 sm:col-span-2';
+                        const parsedStories = parseUserStories(val);
+                        window.currentOriginalStories = parsedStories;
+                        let displayVal = '';
+                        if (parsedStories.length > 0) {
+                            displayVal = parsedStories.map(s => s.title || (s.id ? 'Story #' + s.id : '')).filter(Boolean).join('\n');
+                        } else if (typeof val === 'string' && val.trim() !== '') {
+                            displayVal = val.trim();
                         }
+
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                                <div class="flex items-center gap-2">
+                                    <label class="block text-xs font-semibold text-tremor-content-strong">US Assigned Details</label>
+                                    <span id="storyCountBadge" class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-blue-100 text-blue-700 transition-all">${parsedStories.length} stories</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 text-xs">
+                                    <button type="button" id="btnFormatLines" class="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded text-gray-700 font-medium transition shadow-xs text-xs flex items-center gap-1" title="Format as 1 story per line">
+                                        <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                                        Lines View
+                                    </button>
+                                    <button type="button" id="btnFormatPipes" class="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded text-gray-700 font-medium transition shadow-xs text-xs flex items-center gap-1" title="Format as pipe separated ( | )">
+                                        <span class="font-mono text-gray-500 font-bold">|</span> Pipes View
+                                    </button>
+                                    <button type="button" id="btnClearStories" class="px-2 py-1 bg-white hover:bg-red-50 border border-gray-300 rounded text-red-600 font-medium transition shadow-xs text-xs" title="Clear all stories">
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <textarea id="input_usAssignedPts" rows="9" class="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-sans leading-relaxed transition-all resize-y" placeholder="Enter user story names (one per line or pipe-separated with | )">${escapeHtml(displayVal)}</textarea>
+                            <div class="flex items-center justify-between text-[11px] text-gray-500 mt-1">
+                                <span>Supports newlines or <code class="bg-gray-100 px-1 py-0.5 rounded text-gray-700 font-mono">|</code> separation. Editable after ADO fetch or manual entry.</span>
+                                <span id="syncMetricsHint" class="hidden text-blue-600 cursor-pointer hover:underline font-medium"></span>
+                            </div>
+
+                            <details id="storiesPreviewDrawer" class="mt-2 text-xs border border-gray-200 rounded-lg bg-white overflow-hidden shadow-xs">
+                                <summary class="px-3 py-2 bg-gray-50 cursor-pointer font-medium text-blue-600 hover:text-blue-800 select-none flex items-center justify-between border-b border-transparent">
+                                    <span class="flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                                        Parsed Work Items Breakdown (<span id="previewCountBadge">${parsedStories.length}</span>)
+                                    </span>
+                                    <span class="text-[10px] text-gray-400 font-normal">Click to preview individual stories</span>
+                                </summary>
+                                <div id="storiesPreviewList" class="p-2 max-h-48 overflow-y-auto space-y-1 divide-y divide-gray-100"></div>
+                            </details>
+                        `;
+                    } else if (k.endsWith('Pts')) {
+                        div.className = 'sm:col-span-2'; // full width
+                        let displayVal = val;
+                        div.innerHTML += `<textarea id="input_${k}" rows="3" class="w-full border border-tremor-border rounded px-3 py-2 text-sm text-gray-700 shadow-sm focus:ring-tremor-brand-DEFAULT focus:border-tremor-brand-DEFAULT" placeholder="Enter items (one per line or pipe-separated)">${escapeHtml(displayVal)}</textarea>`;
+                        div.innerHTML += `<p class="text-[10px] text-gray-500 mt-1">Enter items (one per line or pipe-separated with ' | ')</p>`;
+                    } else {
+                        div.innerHTML += `<input type="text" id="input_${k}" value="${escapeHtml(val)}" class="w-full border border-tremor-border rounded px-3 py-2 text-sm text-gray-700 shadow-sm focus:ring-tremor-brand-DEFAULT focus:border-tremor-brand-DEFAULT">`;
                     }
                     grid.appendChild(div);
                 });
@@ -2335,109 +2874,278 @@
                 sectionDiv.appendChild(grid);
                 container.appendChild(sectionDiv);
             });
+
+            // Bind listeners for dynamic US Assigned details textarea
+            const ta = document.getElementById('input_usAssignedPts');
+            if (ta) {
+                const updateStoryUI = () => {
+                    const rawVal = ta.value || '';
+                    const currentEntries = reconcileStories(rawVal, window.currentOriginalStories || []);
+                    const badge = document.getElementById('storyCountBadge');
+                    const pBadge = document.getElementById('previewCountBadge');
+                    const previewList = document.getElementById('storiesPreviewList');
+                    const count = currentEntries.length;
+                    
+                    if (badge) {
+                        badge.textContent = `${count} ${count === 1 ? 'story' : 'stories'}`;
+                        badge.className = `px-2 py-0.5 text-[11px] font-semibold rounded-full ${count > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`;
+                    }
+                    if (pBadge) pBadge.textContent = count;
+                    
+                    if (previewList) {
+                        if (count === 0) {
+                            previewList.innerHTML = '<p class="text-gray-400 italic text-[11px] py-1 text-center">No work items entered</p>';
+                        } else {
+                            previewList.innerHTML = currentEntries.map((s, idx) => {
+                                const isTask = (s.type || '').toLowerCase() === 'task';
+                                const typeBadge = isTask
+                                    ? `<span class="bg-amber-50 text-amber-700 font-semibold px-1.5 py-0.5 rounded text-[10px] ring-1 ring-inset ring-amber-600/20 shrink-0">Task</span>`
+                                    : `<span class="bg-blue-50 text-blue-700 font-semibold px-1.5 py-0.5 rounded text-[10px] ring-1 ring-inset ring-blue-600/20 shrink-0">Story</span>`;
+                                return `
+                                    <div class="py-1 flex items-center justify-between text-xs gap-2">
+                                        <span class="text-gray-800 font-medium truncate flex-1 flex items-center gap-1.5" title="${escapeHtml(s.title)}">
+                                            <span class="text-gray-400 font-mono text-[11px] shrink-0">${idx + 1}.</span>
+                                            ${typeBadge}
+                                            <span class="truncate">${escapeHtml(s.title)}</span>
+                                        </span>
+                                        <div class="flex items-center gap-1.5 flex-shrink-0 text-[10px]">
+                                            ${s.id ? `<span class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono">#${escapeHtml(String(s.id))}</span>` : ''}
+                                            ${s.points ? `<span class="bg-blue-50 text-blue-700 font-semibold px-1.5 py-0.5 rounded">${s.points} pts</span>` : ''}
+                                            ${s.assignee && s.assignee !== 'Unassigned' ? `<span class="bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded truncate max-w-[120px]">${escapeHtml(s.assignee)}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        }
+                    }
+
+                    const inputUsAssigned = document.getElementById('input_usAssigned');
+                    const syncHint = document.getElementById('syncMetricsHint');
+                    if (inputUsAssigned && syncHint) {
+                        const currentNum = parseInt(inputUsAssigned.value) || 0;
+                        if (count > 0 && currentNum !== count) {
+                            syncHint.textContent = `Update User Stories Assigned metric to ${count}`;
+                            syncHint.classList.remove('hidden');
+                            syncHint.onclick = () => {
+                                inputUsAssigned.value = count;
+                                syncHint.classList.add('hidden');
+                            };
+                        } else {
+                            syncHint.classList.add('hidden');
+                        }
+                    }
+                };
+
+                ta.addEventListener('input', updateStoryUI);
+                updateStoryUI();
+
+                const btnLines = document.getElementById('btnFormatLines');
+                if (btnLines) {
+                    btnLines.onclick = () => {
+                        const currentEntries = reconcileStories(ta.value, window.currentOriginalStories || []);
+                        ta.value = currentEntries.map(s => s.title).join('\n');
+                        updateStoryUI();
+                    };
+                }
+
+                const btnPipes = document.getElementById('btnFormatPipes');
+                if (btnPipes) {
+                    btnPipes.onclick = () => {
+                        const currentEntries = reconcileStories(ta.value, window.currentOriginalStories || []);
+                        const hasInternalPipes = currentEntries.some(s => s.title && s.title.includes('|'));
+                        const sep = hasInternalPipes ? ' || ' : ' | ';
+                        ta.value = currentEntries.map(s => s.title).join(sep);
+                        updateStoryUI();
+                    };
+                }
+
+                const btnClear = document.getElementById('btnClearStories');
+                if (btnClear) {
+                    btnClear.onclick = () => {
+                        if (confirm('Clear all user story names?')) {
+                            ta.value = '';
+                            updateStoryUI();
+                        }
+                    };
+                }
+            }
         }
 
-        document.getElementById('saveUpdateBtn').addEventListener('click', async () => {
+                document.getElementById('saveUpdateBtn').addEventListener('click', async () => {
             const teamId = document.getElementById('updateTeamSelect').value;
             if (!teamId) return;
 
+            const btn = document.getElementById('saveUpdateBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline-block text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Saving...`;
+
+            const fetchWithDbWakeup = async (fetchUrl, fetchOptions) => {
+                try {
+                    const res = await fetch(fetchUrl, fetchOptions);
+                    if (res.status >= 500) throw new Error("DB sleep timeout");
+                    return res;
+                } catch (err) {
+                    btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline-block text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Waking up DB (takes ~5s)...`;
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline-block text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Saving...`;
+                    return await fetch(fetchUrl, fetchOptions);
+                }
+            };
+
             const payload = {};
-            const inputs = document.getElementById('updateFormContainer').querySelectorAll('input, select');
+            const inputs = document.getElementById('updateFormContainer').querySelectorAll('input, select, textarea');
             inputs.forEach(input => {
                 const k = input.id.replace('input_', '');
                 let val = input.value === '' ? null : input.value;
 
+                if (k === 'usAssignedPts') {
+                    if (val && val.trim()) {
+                        const parsed = reconcileStories(val, window.currentOriginalStories || []);
+                        val = JSON.stringify(parsed);
+                    } else {
+                        val = null;
+                    }
+                }
+
                 payload[k] = val;
             });
 
-            if (currentUpdateTab === 'ado') {
-                const patVal = payload['ado_pat'];
-                if (patVal === '********') delete payload['ado_pat'];
+            try {
+                if (currentUpdateTab === 'ado') {
+                    const patVal = payload['ado_pat'];
+                    if (patVal === '********') delete payload['ado_pat'];
+
+                    const token = localStorage.getItem('token');
+                    const msg = document.getElementById('updateMsg');
+                    try {
+                        const res = await fetchWithDbWakeup('http://localhost:8000/teams/' + teamId + '/ado-config', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                            body: JSON.stringify(payload)
+                        });
+                        if (res.ok) {
+                            msg.textContent = 'ADO Config updated successfully!';
+                            msg.className = 'text-sm mt-2 text-green-600 block';
+                            msg.classList.remove('hidden');
+                            setTimeout(() => msg.classList.add('hidden'), 3000);
+                            const resT = await fetchWithDbWakeup('http://localhost:8000/teams', { headers: { 'Authorization': 'Bearer ' + token } });
+                            teamsList = await resT.json();
+                        } else {
+                            throw new Error();
+                        }
+                    } catch (e) {
+                        msg.textContent = 'Failed to update ADO config.';
+                        msg.className = 'text-sm mt-2 text-red-600 block';
+                        msg.classList.remove('hidden');
+                    }
+                    return;
+                }
 
                 const token = localStorage.getItem('token');
-                const msg = document.getElementById('updateMsg');
-                try {
-                    const res = await fetch('http://localhost:8000/teams/' + teamId + '/ado-config', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                        body: JSON.stringify(payload)
-                    });
-                    if (res.ok) {
-                        msg.textContent = 'ADO Config updated successfully!';
-                        msg.className = 'text-sm mt-2 text-green-600 block';
-                        msg.classList.remove('hidden');
-                        setTimeout(() => msg.classList.add('hidden'), 3000);
-                        const resT = await fetch('http://localhost:8000/teams');
-                        teamsList = await resT.json();
-                    } else {
-                        throw new Error();
+
+                if (currentUpdateTab === 'profile' || currentUpdateTab === 'details') {
+                    const msgEl = document.getElementById('updateMsg');
+                    try {
+                        const res = await fetchWithDbWakeup('http://localhost:8000/teams/' + teamId + '/profile', {
+                            method: 'PUT',
+                            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        msgEl.classList.remove('hidden');
+                        if (res.ok) {
+                            msgEl.textContent = 'Team Profile saved successfully!';
+                            msgEl.className = 'text-sm mt-2 text-green-600 font-medium';
+                            const pRes = await fetchWithDbWakeup('http://localhost:8000/profiles', { headers: { 'Authorization': 'Bearer ' + token } });
+                            if (pRes.ok) globalData.profiles = await pRes.json();
+                            renderAll();
+                            renderUpdateForm();
+                        } else {
+                            msgEl.textContent = 'Error saving profile.';
+                            msgEl.className = 'text-sm mt-2 text-red-600 font-medium';
+                        }
+                    } catch(e) {
+                        console.error(e);
                     }
-                } catch (e) {
-                    msg.textContent = 'Failed to update ADO config.';
-                    msg.className = 'text-sm mt-2 text-red-600 block';
-                    msg.classList.remove('hidden');
+                    setTimeout(() => { msgEl.classList.add('hidden'); }, 3000);
+                    return;
                 }
-                return;
-            }
-            if (currentUpdateTab === 'metrics' || currentUpdateTab === 'details') {
-                const metric = globalData.metrics.find(m => m.team_id == teamId);
-                if (metric) {
-                    payload['engagement'] = metric.engagement;
-                    payload['spoc'] = metric.spoc;
+
+                if (currentUpdateTab === 'sprint' || currentUpdateTab === 'metrics') {
+                    const metric = globalData.metrics.find(m => m.team_id == teamId);
+                    if (metric) {
+                        payload['engagement'] = metric.engagement;
+                        payload['spoc'] = metric.spoc;
+                    }
+                    const sprintSel = document.getElementById('updateSprintSelect');
+                    if (sprintSel && sprintSel.value) {
+                        payload['sprint_id'] = parseInt(sprintSel.value);
+                        const spObj = globalData.sprints.find(s => s.id == sprintSel.value);
+                        if(spObj) payload['sprint'] = spObj.name;
+                    }
+
+                    // Save both metric and detail in sprint delivery tab
+                    try {
+                        const [mSave, dSave] = await Promise.all([
+                            fetchWithDbWakeup('http://localhost:8000/metrics/' + teamId, {
+                                method: 'PUT',
+                                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            }),
+                            fetchWithDbWakeup('http://localhost:8000/details/' + teamId, {
+                                method: 'PUT',
+                                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            })
+                        ]);
+                        const msgEl = document.getElementById('updateMsg');
+                        msgEl.classList.remove('hidden');
+                        if (mSave.ok && dSave.ok) {
+                            msgEl.textContent = 'Sprint Data saved successfully!';
+                            msgEl.className = 'text-sm mt-2 text-green-600 font-medium';
+                            const [mRes, dRes, cRes, sRes, pRes] = await Promise.all([
+                                fetchWithDbWakeup('http://localhost:8000/metrics', { headers: { 'Authorization': 'Bearer ' + token } }),
+                                fetchWithDbWakeup('http://localhost:8000/details', { headers: { 'Authorization': 'Bearer ' + token } }),
+                                fetchWithDbWakeup('http://localhost:8000/configs', { headers: { 'Authorization': 'Bearer ' + token } }),
+                                fetchWithDbWakeup('http://localhost:8000/sprints', { headers: { 'Authorization': 'Bearer ' + token } }),
+                                fetchWithDbWakeup('http://localhost:8000/profiles', { headers: { 'Authorization': 'Bearer ' + token } })
+                            ]);
+                            globalData.metrics = await mRes.json();
+                            globalData.details = await dRes.json();
+                            globalData.ragConfig = await cRes.json();
+                            globalData.sprints = await sRes.json();
+                            if (pRes.ok) globalData.profiles = await pRes.json();
+
+                            calculateProcessCompliance();
+
+                            sessionStorage.setItem('dashboardData', JSON.stringify({
+                                metrics: globalData.metrics,
+                                details: globalData.details,
+                                ragConfig: globalData.ragConfig,
+                                sprints: globalData.sprints,
+                                profiles: globalData.profiles
+                            }));
+                            sessionStorage.setItem('dashboardTimestamp', Date.now().toString());
+
+                            // Force refresh main view and update form view
+                            renderAll();
+                            renderUpdateForm();
+                        } else {
+                            msgEl.textContent = 'Error saving data.';
+                            msgEl.className = 'text-sm mt-2 text-red-600 font-medium';
+                        }
+                        setTimeout(() => { msgEl.classList.add('hidden'); }, 3000);
+                    } catch (e) {
+                        console.error(e);
+                    }
                 }
-                const sprintSel = document.getElementById('updateSprintSelect');
-                if (sprintSel && sprintSel.value) {
-                    payload['sprint_id'] = parseInt(sprintSel.value);
-                    const spObj = globalData.sprints.find(s => s.id == sprintSel.value);
-                    if(spObj) payload['sprint'] = spObj.name;
-                }
-            }
-
-            const token = localStorage.getItem('token');
-            const url = "http://localhost:8000/" + (currentUpdateTab === 'configs' ? 'teams/' + teamId + '/configs' : currentUpdateTab + '/' + teamId);
-
-            try {
-                const res = await fetch(url, {
-                    method: 'PUT',
-                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const msgEl = document.getElementById('updateMsg');
-                msgEl.classList.remove('hidden');
-                if (res.ok) {
-                    msgEl.textContent = 'Saved successfully!';
-                    msgEl.className = 'text-sm mt-2 text-green-600 font-medium';
-                    const [mRes, dRes, cRes, sRes] = await Promise.all([
-                        fetch('http://localhost:8000/metrics', { headers: { 'Authorization': 'Bearer ' + token } }),
-                        fetch('http://localhost:8000/details', { headers: { 'Authorization': 'Bearer ' + token } }),
-                        fetch('http://localhost:8000/configs', { headers: { 'Authorization': 'Bearer ' + token } }),
-                        fetch('http://localhost:8000/sprints', { headers: { 'Authorization': 'Bearer ' + token } })
-                    ]);
-                    globalData.metrics = await mRes.json();
-                    globalData.details = await dRes.json();
-                    globalData.ragConfig = await cRes.json();
-                    globalData.sprints = await sRes.json();
-
-                    calculateProcessCompliance();
-
-                    sessionStorage.setItem('dashboardData', JSON.stringify({
-                        metrics: globalData.metrics,
-                        details: globalData.details,
-                        ragConfig: globalData.ragConfig,
-                        sprints: globalData.sprints
-                    }));
-                    sessionStorage.setItem('dashboardTimestamp', Date.now().toString());
-
-                    // Force refresh main view and update form view
-                    renderAll();
-                    renderUpdateForm();
-                } else {
-                    msgEl.textContent = 'Error saving data.';
-                    msgEl.className = 'text-sm mt-2 text-red-600 font-medium';
-                }
-                setTimeout(() => { msgEl.classList.add('hidden'); }, 3000);
-            } catch (e) {
-                console.error(e);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
             }
         });
 
@@ -2472,6 +3180,7 @@
                     globalData.details = parsed.details;
                     globalData.ragConfig = parsed.ragConfig;
                     globalData.sprints = parsed.sprints || [];
+                    globalData.profiles = parsed.profiles || [];
 
                     calculateProcessCompliance();
 
@@ -2491,11 +3200,12 @@
             }
 
             try {
-                const [metricsRes, detailsRes, configsRes, sprintsRes] = await Promise.all([
+                const [metricsRes, detailsRes, configsRes, sprintsRes, profilesRes] = await Promise.all([
                     fetch('http://localhost:8000/metrics', { headers: { 'Authorization': 'Bearer ' + token } }),
                     fetch('http://localhost:8000/details', { headers: { 'Authorization': 'Bearer ' + token } }),
                     fetch('http://localhost:8000/configs', { headers: { 'Authorization': 'Bearer ' + token } }),
-                    fetch('http://localhost:8000/sprints', { headers: { 'Authorization': 'Bearer ' + token } })
+                    fetch('http://localhost:8000/sprints', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch('http://localhost:8000/profiles', { headers: { 'Authorization': 'Bearer ' + token } })
                 ]);
 
                 if (metricsRes.ok && detailsRes.ok && configsRes.ok && sprintsRes.ok) {
@@ -2503,11 +3213,13 @@
                     const details = await detailsRes.json();
                     const configs = await configsRes.json();
                     const sprints = await sprintsRes.json();
+                    const profiles = profilesRes && profilesRes.ok ? await profilesRes.json() : [];
 
                     globalData.metrics = metrics;
                     globalData.details = details;
                     globalData.ragConfig = configs;
                     globalData.sprints = sprints;
+                    globalData.profiles = profiles;
 
                     calculateProcessCompliance();
 
@@ -2515,7 +3227,8 @@
                         metrics: metrics,
                         details: details,
                         ragConfig: configs,
-                        sprints: sprints
+                        sprints: sprints,
+                        profiles: profiles
                     }));
                     sessionStorage.setItem('dashboardTimestamp', Date.now().toString());
 
@@ -2550,6 +3263,7 @@
         let pendingAdoData = null;
         document.getElementById('syncAdoBtn').addEventListener('click', async () => {
             const teamId = document.getElementById('updateTeamSelect').value;
+            const sprintId = document.getElementById('updateSprintSelect').value;
             if (!teamId) {
                 alert("Please select a team to sync data.");
                 return;
@@ -2566,21 +3280,167 @@
                 });
                 if (res.ok) {
                     pendingAdoData = await res.json();
-                    document.getElementById('adoReviewIteration').textContent = 'Iteration: ' + pendingAdoData.iteration_name;
-                    document.getElementById('revUsAssigned').textContent = pendingAdoData.usAssigned;
-                    document.getElementById('revUsCompleted').textContent = pendingAdoData.usCompleted;
-                    document.getElementById('revSpAssigned').textContent = pendingAdoData.spAssigned;
-                    document.getElementById('revSpCompleted').textContent = pendingAdoData.spCompleted;
-                    let storiesHtml = '<p class="font-semibold mb-1">User Stories Found:</p><ul>';
-                    if(pendingAdoData.user_stories && pendingAdoData.user_stories.length > 0) {
-                        pendingAdoData.user_stories.forEach(s => {
-                            storiesHtml += `<li>- ${s.title} (${s.story_points || 0} pts)</li>`;
-                        });
-                    } else {
-                        storiesHtml += '<li>No stories found.</li>';
+                    
+                    // Check if the target sprint already contains recorded data
+                    const sprintObj = globalData.sprints.find(s => s.id == sprintId);
+                    const sprintName = sprintObj ? sprintObj.name : (pendingAdoData.iteration_name || 'Selected Sprint');
+                    const existingMetric = globalData.metrics.find(m => m.team_id == teamId && m.sprint_id == sprintId);
+                    const existingDetail = globalData.details.find(d => d.team_id == teamId && d.sprint_id == sprintId);
+
+                    let hasExistingData = false;
+                    let existingSummary = '';
+                    if (existingMetric) {
+                        const existingUs = existingMetric.usAssigned || 0;
+                        const existingSp = existingMetric.spAssigned || 0;
+                        const hasUsStories = (existingUs > 0 || existingSp > 0);
+                        const hasDetails = existingDetail && existingDetail.usAssignedPts && existingDetail.usAssignedPts.trim() !== '' && existingDetail.usAssignedPts !== '[]';
+                        if (hasUsStories || hasDetails) {
+                            hasExistingData = true;
+                            existingSummary = `${existingUs} user stories, ${existingSp} story points`;
+                        }
                     }
-                    storiesHtml += '</ul>';
-                    document.getElementById('adoStoryNames').innerHTML = storiesHtml;
+
+                    document.getElementById('adoReviewIteration').textContent = 'Iteration: ' + (pendingAdoData.iteration_name || sprintName);
+
+                    // Warning dialogue setup
+                    const warningEl = document.getElementById('adoOverwriteWarning');
+                    const warningMsgEl = document.getElementById('adoOverwriteWarningMsg');
+                    const confirmCheck = document.getElementById('confirmOverwriteCheck');
+                    const confirmBtn = document.getElementById('confirmAdoSyncBtn');
+
+                    if (hasExistingData) {
+                        warningEl.classList.remove('hidden');
+                        warningMsgEl.innerHTML = `Sprint <strong>${escapeHtml(sprintName)}</strong> already contains recorded delivery data (<strong>${escapeHtml(existingSummary)}</strong>). Proceeding will overwrite this sprint's delivery data.`;
+                        confirmCheck.checked = false;
+                        confirmBtn.disabled = true;
+                        confirmBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Confirm Overwrite & Update DB`;
+                        
+                        confirmCheck.onchange = () => {
+                            confirmBtn.disabled = !confirmCheck.checked;
+                        };
+                    } else {
+                        warningEl.classList.add('hidden');
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Confirm & Update DB`;
+                    }
+
+                    // Extract all unique assignees / team members
+                    const allStories = pendingAdoData.user_stories || [];
+                    const assigneeMap = {};
+                    allStories.forEach(s => {
+                        const name = (s.assignee && s.assignee.trim()) ? s.assignee.trim() : 'Unassigned';
+                        if (!assigneeMap[name]) {
+                            assigneeMap[name] = { name: name, count: 0, points: 0 };
+                        }
+                        assigneeMap[name].count++;
+                        assigneeMap[name].points += (parseFloat(s.story_points || s.points) || 0);
+                    });
+
+                    const assigneeNames = Object.keys(assigneeMap).sort((a, b) => {
+                        if (a === 'Unassigned') return 1;
+                        if (b === 'Unassigned') return -1;
+                        return a.localeCompare(b);
+                    });
+
+                    const checkboxesContainer = document.getElementById('adoAssigneeCheckboxes');
+                    checkboxesContainer.innerHTML = '';
+
+                    // Populate checkboxes
+                    assigneeNames.forEach(name => {
+                        const info = assigneeMap[name];
+                        const isUnassigned = name === 'Unassigned';
+                        const labelEl = document.createElement('label');
+                        labelEl.className = 'flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200 hover:border-blue-400 cursor-pointer select-none text-xs transition shadow-2xs';
+                        labelEl.innerHTML = `
+                            <div class="flex items-center gap-2 truncate mr-2">
+                                <input type="checkbox" class="assignee-filter-check rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4" value="${escapeHtml(name)}" checked>
+                                <span class="font-medium text-gray-800 truncate" title="${escapeHtml(name)}">
+                                    ${isUnassigned ? '<span class="italic text-gray-400">👤 Unassigned</span>' : '👤 ' + escapeHtml(name)}
+                                </span>
+                            </div>
+                            <span class="text-[11px] text-gray-500 font-mono flex-shrink-0 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
+                                ${info.count} US • ${Math.round(info.points * 10) / 10} pts
+                            </span>
+                        `;
+                        checkboxesContainer.appendChild(labelEl);
+                    });
+
+                    // Live Filter update function
+                    const updateFilteredView = () => {
+                        const checkedBoxes = checkboxesContainer.querySelectorAll('.assignee-filter-check:checked');
+                        const selectedNames = new Set(Array.from(checkedBoxes).map(cb => cb.value));
+
+                        const filteredStories = allStories.filter(s => {
+                            const name = (s.assignee && s.assignee.trim()) ? s.assignee.trim() : 'Unassigned';
+                            return selectedNames.has(name);
+                        });
+
+                        const usAssigned = filteredStories.length;
+                        const usCompleted = filteredStories.filter(s => s.completed || ['closed', 'done', 'resolved'].includes(String(s.state).toLowerCase())).length;
+                        const spAssigned = filteredStories.reduce((sum, s) => sum + (parseFloat(s.story_points || s.points) || 0), 0);
+                        const spCompleted = filteredStories.filter(s => s.completed || ['closed', 'done', 'resolved'].includes(String(s.state).toLowerCase())).reduce((sum, s) => sum + (parseFloat(s.story_points || s.points) || 0), 0);
+
+                        // Update dynamic metric summary cards
+                        document.getElementById('revUsAssigned').textContent = usAssigned;
+                        document.getElementById('revUsCompleted').textContent = usCompleted;
+                        document.getElementById('revSpAssigned').textContent = Math.round(spAssigned * 10) / 10;
+                        document.getElementById('revSpCompleted').textContent = Math.round(spCompleted * 10) / 10;
+                        const tasksInFiltered = filteredStories.filter(s => (s.type || '').toLowerCase() === 'task').length;
+                        const storiesInFiltered = usAssigned - tasksInFiltered;
+                        const headerText = tasksInFiltered > 0
+                            ? `Work Items to be Pulled (${usAssigned}: ${storiesInFiltered} Stories, ${tasksInFiltered} Tasks)`
+                            : `User Stories to be Pulled (${usAssigned})`;
+                        document.getElementById('adoStoriesCountHeader').textContent = headerText;
+
+                        // Update list preview
+                        const listContainer = document.getElementById('adoStoryNames');
+                        if (filteredStories.length === 0) {
+                            listContainer.innerHTML = '<p class="text-xs text-gray-400 italic py-4 text-center">No work items match selected team members.</p>';
+                        } else {
+                            listContainer.innerHTML = '<ul class="space-y-1.5">' + filteredStories.map((s, idx) => {
+                                const isTask = (s.type || '').toLowerCase() === 'task';
+                                const typeBadge = isTask
+                                    ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-amber-50 text-amber-800 font-medium border border-amber-200 shrink-0">Task</span>`
+                                    : `<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 font-medium border border-blue-200 shrink-0">Story</span>`;
+                                const pts = (s.story_points || s.points) ? `${s.story_points || s.points} pts` : '0 pts';
+                                const person = s.assignee && s.assignee !== 'Unassigned' ? ` • <span class="text-purple-700 font-medium">👤 ${escapeHtml(s.assignee)}</span>` : ' • <span class="text-gray-400 italic">Unassigned</span>';
+                                const idBadge = s.id ? `<span class="font-mono text-gray-500 text-xs">#${escapeHtml(String(s.id))}</span> ` : '';
+                                const stateBadge = s.state ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 font-medium ml-1">${escapeHtml(s.state)}</span>` : '';
+                                return `<li class="text-xs text-gray-800 bg-gray-50 p-2 rounded-lg border border-gray-100 flex items-center justify-between gap-2">
+                                    <div class="truncate mr-2 flex items-center gap-1.5">
+                                        <span class="text-gray-400 text-[10px] font-mono shrink-0">${idx + 1}.</span>
+                                        ${typeBadge}
+                                        ${idBadge}<strong class="truncate">${escapeHtml(s.title)}</strong>
+                                        ${person}
+                                    </div>
+                                    <div class="flex items-center gap-1 flex-shrink-0">
+                                        <span class="text-blue-700 font-semibold bg-blue-50 px-1.5 py-0.5 rounded text-[11px]">${pts}</span>
+                                        ${stateBadge}
+                                    </div>
+                                </li>`;
+                            }).join('') + '</ul>';
+                        }
+
+                        // Stash filtered data on pendingAdoData
+                        pendingAdoData.filtered_stories = filteredStories;
+                        pendingAdoData.filtered_usAssigned = usAssigned;
+                        pendingAdoData.filtered_usCompleted = usCompleted;
+                        pendingAdoData.filtered_spAssigned = Math.round(spAssigned * 10) / 10;
+                        pendingAdoData.filtered_spCompleted = Math.round(spCompleted * 10) / 10;
+                        pendingAdoData.hasExistingData = hasExistingData;
+                    };
+
+                    checkboxesContainer.onchange = updateFilteredView;
+                    updateFilteredView();
+
+                    document.getElementById('btnSelectAllAssignees').onclick = () => {
+                        checkboxesContainer.querySelectorAll('.assignee-filter-check').forEach(cb => cb.checked = true);
+                        updateFilteredView();
+                    };
+                    document.getElementById('btnDeselectAllAssignees').onclick = () => {
+                        checkboxesContainer.querySelectorAll('.assignee-filter-check').forEach(cb => cb.checked = false);
+                        updateFilteredView();
+                    };
 
                     document.getElementById('adoReviewModal').classList.remove('hidden');
                     document.getElementById('adoReviewError').classList.add('hidden');
@@ -2595,19 +3455,34 @@
             btn.disabled = false;
         });
 
-        document.getElementById('closeAdoReviewBtn').addEventListener('click', () => {
+        const closeAdoReviewModalFn = () => {
             document.getElementById('adoReviewModal').classList.add('hidden');
             pendingAdoData = null;
-        });
+        };
+
+        document.getElementById('closeAdoReviewBtn').addEventListener('click', closeAdoReviewModalFn);
+        const closeXBtn = document.getElementById('closeAdoReviewXBtn');
+        if (closeXBtn) closeXBtn.addEventListener('click', closeAdoReviewModalFn);
 
         document.getElementById('confirmAdoSyncBtn').addEventListener('click', async () => {
             if (!pendingAdoData) return;
             const teamId = document.getElementById('updateTeamSelect').value;
             const token = localStorage.getItem('token');
 
+            // If overwrite warning is active, require checkbox
+            if (pendingAdoData.hasExistingData) {
+                const confirmCheck = document.getElementById('confirmOverwriteCheck');
+                if (!confirmCheck || !confirmCheck.checked) {
+                    const errEl = document.getElementById('adoReviewError');
+                    errEl.textContent = 'Please confirm that you want to overwrite existing sprint data.';
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+            }
+
             const btn = document.getElementById('confirmAdoSyncBtn');
             const og = btn.innerHTML;
-            btn.innerHTML = 'Updating DB...';
+            btn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline-block text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Updating DB...';
             btn.disabled = true;
 
             try {
@@ -2619,10 +3494,16 @@
                 const metric = globalData.metrics.find(m => m.team_id == teamId && m.sprint_id == sprintId) || {};
                 const detail = globalData.details.find(d => d.team_id == teamId && d.sprint_id == sprintId) || {};
                 
-                // Parse user story names separated by pipe
+                // Use filtered user stories based on selected assignees
+                const finalStories = pendingAdoData.filtered_stories !== undefined ? pendingAdoData.filtered_stories : (pendingAdoData.user_stories || []);
+                const finalUsAssigned = pendingAdoData.filtered_usAssigned !== undefined ? pendingAdoData.filtered_usAssigned : pendingAdoData.usAssigned;
+                const finalUsCompleted = pendingAdoData.filtered_usCompleted !== undefined ? pendingAdoData.filtered_usCompleted : pendingAdoData.usCompleted;
+                const finalSpAssigned = pendingAdoData.filtered_spAssigned !== undefined ? pendingAdoData.filtered_spAssigned : pendingAdoData.spAssigned;
+                const finalSpCompleted = pendingAdoData.filtered_spCompleted !== undefined ? pendingAdoData.filtered_spCompleted : pendingAdoData.spCompleted;
+
                 let usNames = "";
-                if (pendingAdoData.user_stories && pendingAdoData.user_stories.length > 0) {
-                    usNames = pendingAdoData.user_stories.map(s => s.title).join(' | ');
+                if (finalStories && finalStories.length > 0) {
+                    usNames = JSON.stringify(finalStories);
                 }
 
                 // Construct payloads
@@ -2630,10 +3511,10 @@
                     ...metric,
                     sprint_id: sprintId ? parseInt(sprintId) : null,
                     sprint: sprintName,
-                    spAssigned: pendingAdoData.spAssigned,
-                    spCompleted: pendingAdoData.spCompleted,
-                    usAssigned: pendingAdoData.usAssigned,
-                    usCompleted: pendingAdoData.usCompleted
+                    spAssigned: finalSpAssigned,
+                    spCompleted: finalSpCompleted,
+                    usAssigned: finalUsAssigned,
+                    usCompleted: finalUsCompleted
                 };
 
                 const detailPayload = {
@@ -2664,7 +3545,7 @@
                     
                     const toast = document.getElementById('toast');
                     const toastMsg = document.getElementById('toastMsg');
-                    if (toastMsg) toastMsg.textContent = 'ADO data synced successfully!';
+                    if (toastMsg) toastMsg.textContent = 'ADO data synced and filtered successfully!';
                     if (toast) {
                         toast.classList.remove('translate-y-20', 'opacity-0');
                         setTimeout(() => { 
@@ -2675,14 +3556,15 @@
                 } else {
                     document.getElementById('adoReviewError').textContent = 'Failed to update DB';
                     document.getElementById('adoReviewError').classList.remove('hidden');
+                    btn.innerHTML = og;
+                    btn.disabled = false;
                 }
             } catch (e) {
                 document.getElementById('adoReviewError').textContent = 'Connection error';
                 document.getElementById('adoReviewError').classList.remove('hidden');
+                btn.innerHTML = og;
+                btn.disabled = false;
             }
-
-            btn.innerHTML = og;
-            btn.disabled = false;
         });
 
         // Register button logic removed in favor of Onboard SPOC modal
